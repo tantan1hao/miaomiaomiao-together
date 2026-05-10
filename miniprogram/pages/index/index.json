@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "今天吃什么",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "enableShareTimeline": true,
+  "usingComponents": {}
+}

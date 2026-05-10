@@ -1,0 +1,196 @@
+<wxs src="/utils/format.wxs" module="fmt" />
+<view class="container">
+  <view class="announcement-bar" wx:if="{{announcement}}">
+    <view class="announcement-icon">📢</view>
+    <view class="announcement-content">
+      <text class="announcement-text">{{announcement}}</text>
+    </view>
+  </view>
+
+  <view class="header">
+    <text class="title" bindtap="onTitleTap">{{currentSchool.abbr || ''}}er今天吃什么</text>
+    <view class="school-selector" bindtap="showSchoolPicker">
+      <text class="school-name">{{currentSchool.name || '选择学校'}}</text>
+      <text class="school-arrow">▼</text>
+    </view>
+  </view>
+
+  <view class="stats-bar">
+    <view class="stat-item">
+      <text class="stat-value">{{fmt.formatNumber(stats.today)}}</text>
+      <text class="stat-label">今日使用</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{fmt.formatNumber(totalShopCount)}}</text>
+      <text class="stat-label">店家总数</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item clickable" bindtap="showReputationList">
+      <text class="stat-value">{{fmt.formatNumber(reputationStats.count)}}</text>
+      <text class="stat-label">人气榜单</text>
+    </view>
+  </view>
+
+  <scroll-view scroll-x class="canteen-tabs" enhanced show-scrollbar="{{false}}">
+    <view class="canteen-tabs-inner">
+      <view class="tab-item {{fmt.includes(selectedCanteens, 'all') ? 'active' : ''}}" data-canteen="all" bindtap="onCanteenChange">
+        <text>全部</text>
+        <text class="tab-count" wx:if="{{canteenShopCounts.length > 0}}">({{fmt.formatNumber(totalShopCount)}})</text>
+      </view>
+      <view wx:for="{{canteenShopCounts}}" wx:key="_id" class="tab-item {{fmt.includes(selectedCanteens, item._id) ? 'active' : ''}}" data-canteen="{{item._id}}" bindtap="onCanteenChange">
+        <text>{{item.name}}</text>
+        <text class="tab-count">({{fmt.formatNumber(item.count)}})</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="lottery-box">
+    <view class="result-card">
+      <view wx:if="{{!isRolling && !hasResult}}" class="placeholder-text">
+        点击下方按钮开始抽奖
+      </view>
+      
+      <view wx:if="{{isRolling}}" class="rolling-content">
+        <view class="rolling-item">{{rollingData.canteen}}</view>
+        <view class="rolling-item">{{rollingData.floor}}</view>
+        <view class="rolling-item shop">{{rollingData.shop}}</view>
+      </view>
+      
+      <view wx:if="{{!isRolling && hasResult}}" class="result-content">
+        <view class="result-row">
+          <text class="result-label">食堂</text>
+          <text class="result-value">{{result.canteen}}</text>
+        </view>
+        <view class="result-row">
+          <text class="result-label">楼层</text>
+          <text class="result-value">{{result.floor}}</text>
+        </view>
+        <view class="result-row">
+          <text class="result-label">店铺</text>
+          <text class="result-value shop">{{result.shop}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="btn-wrapper">
+    <view class="lottery-btn {{isRolling ? 'disabled' : ''}}" bindtap="startLottery">
+      {{isRolling ? '抽奖中...' : '开始抽奖'}}
+    </view>
+  </view>
+
+  <view class="suggestion-btn" bindtap="goToSuggestion">
+    <text class="suggestion-icon">💡</text>
+    <text class="suggestion-text">提建议</text>
+  </view>
+
+  <view class="footer">
+    <text class="footer-text"><text class="footer-highlight">管理员</text> <text class="footer-highlight">{{currentSchool.name || '北京信息科技大学'}}</text>  <text class="footer-highlight">{{currentSchool.admin || '西风漂流'}}</text></text>
+    <text class="footer-text">开发同学 北京信息科技大学 西风漂流</text>
+  </view>
+
+  <view class="school-picker-modal" wx:if="{{showSchoolPickerModal}}">
+    <view class="modal-mask" bindtap="closeSchoolPicker"></view>
+    <view class="school-picker-card">
+      <view class="school-picker-header">
+        <text class="school-picker-title">选择学校</text>
+        <view class="school-picker-close" bindtap="closeSchoolPicker">✕</view>
+      </view>
+      <view class="school-search-box">
+        <text class="search-icon">🔍</text>
+        <input class="school-search-input" 
+               placeholder="搜索学校名称或简称" 
+               value="{{schoolSearchKeyword}}"
+               bindinput="onSchoolSearchInput" />
+      </view>
+      <scroll-view scroll-y class="school-picker-content">
+        <block wx:if="{{!schoolSearchKeyword && recentSchools.length > 0}}">
+          <view class="school-group-title">最近使用</view>
+          <view class="school-item {{currentSchool._id === item._id ? 'active' : ''}}" 
+                wx:for="{{recentSchools}}" wx:key="_id" 
+                bindtap="selectSchool" data-school="{{item}}">
+            <text class="school-item-name">{{item.name}}</text>
+            <text class="school-item-check" wx:if="{{currentSchool._id === item._id}}">✓</text>
+          </view>
+          <view class="school-divider"></view>
+        </block>
+        <view class="school-group-title" wx:if="{{!schoolSearchKeyword}}">全部学校</view>
+        <view class="school-item {{currentSchool._id === item._id ? 'active' : ''}}" 
+              wx:for="{{displaySchoolList}}" wx:key="_id" 
+              bindtap="selectSchool" data-school="{{item}}">
+          <text class="school-item-name">{{item.name}}</text>
+          <text class="school-item-check" wx:if="{{currentSchool._id === item._id}}">✓</text>
+        </view>
+        <view class="school-empty" wx:if="{{isSchoolListEmpty}}">
+          {{schoolSearchKeyword ? '未找到匹配的学校' : '暂无学校数据'}}
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view class="password-modal" wx:if="{{showPasswordModal}}">
+    <view class="modal-mask" bindtap="closePasswordModal"></view>
+    <view class="modal-content">
+      <text class="modal-title">请输入管理密码</text>
+      <input class="password-input" type="password" placeholder="请输入密码" bindinput="onPasswordInput" value="{{passwordInput}}" />
+      <view class="modal-btns">
+        <view class="modal-btn cancel" bindtap="closePasswordModal">取消</view>
+        <view class="modal-btn confirm" bindtap="confirmPassword">确认</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="result-modal" wx:if="{{showResultModal}}">
+    <view class="modal-mask" bindtap="closeResultModal"></view>
+    <view class="modal-card">
+      <view class="modal-icon">🎉</view>
+      <view class="modal-title-text">今天就吃这个！</view>
+      
+      <view class="result-box">
+        <view class="result-line">
+          <text class="line-label">食堂</text>
+          <text class="line-value">{{result.canteen}}</text>
+        </view>
+        <view class="result-line">
+          <text class="line-label">楼层</text>
+          <text class="line-value">{{result.floor}}</text>
+        </view>
+        <view class="result-line highlight">
+          <text class="line-label">店铺</text>
+          <text class="line-value">{{result.shop}}</text>
+        </view>
+      </view>
+      
+      <view class="copy-btn" bindtap="copyResult">
+        <text class="copy-icon">📋</text>
+        <text>复制结果</text>
+      </view>
+      
+      <view class="action-btns">
+        <view class="action-btn again" bindtap="lotteryAgain">再抽一次</view>
+        <view class="action-btn confirm" bindtap="confirmResult">就这个了</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="reputation-modal" wx:if="{{showReputationModal}}">
+    <view class="modal-mask" bindtap="closeReputationModal"></view>
+    <view class="reputation-card">
+      <view class="reputation-header">
+        <text class="reputation-title">人气榜单</text>
+        <view class="reputation-close" bindtap="closeReputationModal">X</view>
+      </view>
+      <scroll-view scroll-y class="reputation-content">
+        <view class="reputation-item" wx:for="{{reputationStats.list}}" wx:key="shopName">
+          <view class="reputation-rank">{{index + 1}}</view>
+          <view class="reputation-shop-name">{{item.shopName}}</view>
+          <view class="reputation-count">{{fmt.formatNumber(item.count)}}次</view>
+        </view>
+        <view class="reputation-empty" wx:if="{{reputationStats.list.length === 0}}">
+          暂无口碑数据
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

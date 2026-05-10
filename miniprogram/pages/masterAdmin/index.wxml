@@ -1,0 +1,156 @@
+<wxs src="../../utils/format.wxs" module="format" />
+<view class="container">
+  <view class="header">
+    <text class="title">总管理员控制台</text>
+    <text class="subtitle">管理所有学校</text>
+  </view>
+
+  <view class="quick-entry">
+    <view class="quick-entry-title">快速入口</view>
+    <view class="quick-entry-btn" bindtap="goToBistuAdmin">
+      <text class="quick-entry-text">管理北京信息科技大学</text>
+      <text class="quick-entry-arrow">→</text>
+    </view>
+  </view>
+
+  <view class="stats-section">
+    <view class="section-header" bindtap="toggleStats">
+      <text class="section-title">数据统计</text>
+      <view class="header-right">
+        <view class="refresh-btn" catchtap="loadAllSchoolStats">刷新</view>
+        <text class="collapse-arrow {{statsExpanded ? 'expanded' : ''}}">▼</text>
+      </view>
+    </view>
+    <view class="collapse-content {{statsExpanded ? 'expanded' : ''}}">
+      <view class="global-stats">
+        <view class="global-stats-item">
+          <text class="global-stats-value">{{format.formatNumber(globalTotal)}}</text>
+          <text class="global-stats-label">全局累计</text>
+        </view>
+        <view class="global-stats-divider"></view>
+        <view class="global-stats-item">
+          <text class="global-stats-value">{{format.formatNumber(schoolList.length)}}</text>
+          <text class="global-stats-label">学校总数</text>
+        </view>
+      </view>
+      <view class="stats-list">
+        <view class="stats-card" wx:for="{{allSchoolStats}}" wx:key="_id">
+          <view class="stats-school-name">{{item.name}}</view>
+          <view class="stats-row">
+            <view class="stats-item">
+              <text class="stats-value">{{format.formatNumber(item.today)}}</text>
+              <text class="stats-label">今日</text>
+            </view>
+            <view class="stats-divider"></view>
+            <view class="stats-item">
+              <text class="stats-value">{{format.formatNumber(item.total)}}</text>
+              <text class="stats-label">累计</text>
+            </view>
+          </view>
+        </view>
+        <view class="empty-tip" wx:if="{{allSchoolStats.length === 0}}">
+          暂无统计数据
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="school-section">
+    <view class="section-header" bindtap="toggleSchoolList">
+      <text class="section-title">学校列表</text>
+      <view class="header-right">
+        <view class="add-btn" catchtap="showAddSchoolModal">+ 添加学校</view>
+        <text class="collapse-arrow {{schoolListExpanded ? 'expanded' : ''}}">▼</text>
+      </view>
+    </view>
+    <view class="collapse-content {{schoolListExpanded ? 'expanded' : ''}}">
+      <view class="school-list">
+        <view class="school-item" wx:for="{{schoolList}}" wx:key="_id">
+          <view class="school-order">
+            <view class="order-btn {{index === 0 ? 'disabled' : ''}}" bindtap="moveSchoolUp" data-index="{{index}}">↑</view>
+            <text class="order-num">{{index + 1}}</text>
+            <view class="order-btn {{index === schoolList.length - 1 ? 'disabled' : ''}}" bindtap="moveSchoolDown" data-index="{{index}}">↓</view>
+          </view>
+          <view class="school-info">
+            <text class="school-name">{{item.name}}</text>
+            <view class="school-meta">
+              <text class="school-abbr">{{item.abbr}}er</text>
+              <text class="school-admin" wx:if="{{item.admin}}">管理员：{{item.admin}}</text>
+            </view>
+          </view>
+          <view class="school-actions">
+            <view class="action-btn edit" bindtap="showEditSchoolModal" data-school="{{item}}">编辑</view>
+            <view class="action-btn delete" bindtap="deleteSchool" data-school="{{item}}">删除</view>
+          </view>
+        </view>
+        <view class="empty-tip" wx:if="{{schoolList.length === 0}}">
+          暂无学校数据，请添加学校
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="suggestion-section">
+    <view class="section-header" bindtap="toggleSuggestions">
+      <text class="section-title">用户建议</text>
+      <view class="header-right">
+        <view class="refresh-btn" catchtap="loadSuggestions">刷新</view>
+        <text class="collapse-arrow {{suggestionsExpanded ? 'expanded' : ''}}">▼</text>
+      </view>
+    </view>
+    <view class="collapse-content {{suggestionsExpanded ? 'expanded' : ''}}">
+      <view class="suggestion-list">
+        <view class="suggestion-item" wx:for="{{suggestions}}" wx:key="_id">
+          <view class="suggestion-header">
+            <text class="suggestion-time">{{item.timeStr}}</text>
+          </view>
+          <view class="suggestion-content">{{item.content}}</view>
+          <view class="suggestion-contact" wx:if="{{item.contact}}">
+            <text class="contact-label">联系方式：</text>
+            <text class="contact-value">{{item.contact}}</text>
+          </view>
+        </view>
+        <view class="empty-tip" wx:if="{{suggestions.length === 0}}">
+          暂无用户建议
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-actions">
+    <view class="back-btn" bindtap="goBack">返回首页</view>
+  </view>
+
+  <view class="modal" wx:if="{{showSchoolModal}}">
+    <view class="modal-mask" bindtap="closeSchoolModal"></view>
+    <view class="modal-content">
+      <text class="modal-title">{{isEditing ? '编辑学校' : '添加学校'}}</text>
+      
+      <view class="form-item">
+        <text class="form-label">学校名称</text>
+        <input class="form-input" placeholder="请输入学校名称" value="{{schoolForm.name}}" bindinput="onSchoolNameInput" />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">英文简称</text>
+        <input class="form-input" placeholder="如：BISTU、PKU、THU" value="{{schoolForm.abbr}}" bindinput="onSchoolAbbrInput" />
+        <text class="form-tip">显示为：{{schoolForm.abbr || 'XXX'}}er今天吃什么</text>
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">管理密码</text>
+        <input class="form-input" placeholder="请输入管理密码" value="{{schoolForm.password}}" bindinput="onSchoolPasswordInput" />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">管理员</text>
+        <input class="form-input" placeholder="请输入管理员姓名" value="{{schoolForm.admin}}" bindinput="onSchoolAdminInput" />
+      </view>
+      
+      <view class="modal-btns">
+        <view class="modal-btn cancel" bindtap="closeSchoolModal">取消</view>
+        <view class="modal-btn confirm" bindtap="saveSchool">保存</view>
+      </view>
+    </view>
+  </view>
+</view>

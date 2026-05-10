@@ -1,0 +1,37 @@
+<view class="container">
+  <view class="header">
+    <text class="title">提建议</text>
+  </view>
+
+  <view class="form">
+    <view class="form-item">
+      <text class="label">您的建议</text>
+      <textarea class="content-input" 
+                placeholder="请输入您的建议..." 
+                value="{{content}}"
+                bindinput="onContentInput"
+                maxlength="500"
+                show-confirm-bar="{{false}}"
+                adjust-position="{{true}}"
+                auto-height />
+      <text class="char-count">{{content.length}}/500</text>
+    </view>
+
+    <view class="form-item">
+      <text class="label">联系方式（选填）</text>
+      <input class="contact-input" 
+             placeholder="微信号/手机号/邮箱" 
+             value="{{contact}}"
+             bindinput="onContactInput"
+             maxlength="50" />
+    </view>
+  </view>
+
+  <view class="btn-wrapper">
+    <button class="submit-btn {{!canSubmit ? 'disabled' : ''}}" 
+            bindtap="submitSuggestion"
+            disabled="{{!canSubmit || submitting}}">
+      {{submitting ? '提交中...' : '提交'}}
+    </button>
+  </view>
+</view>

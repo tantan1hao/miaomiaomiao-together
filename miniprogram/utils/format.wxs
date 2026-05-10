@@ -1,0 +1,33 @@
+var formatNumber = function(num) {
+  if (num === null || num === undefined) {
+    return '0'
+  }
+  var str = num.toString()
+  var result = ''
+  var count = 0
+  for (var i = str.length - 1; i >= 0; i--) {
+    if (count > 0 && count % 3 === 0) {
+      result = ',' + result
+    }
+    result = str.charAt(i) + result
+    count++
+  }
+  return result
+}
+
+var includes = function(arr, item) {
+  if (!arr || arr.length === 0) {
+    return false
+  }
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] === item) {
+      return true
+    }
+  }
+  return false
+}
+
+module.exports = {
+  formatNumber: formatNumber,
+  includes: includes
+}
