@@ -7,7 +7,7 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
-const MASTER_PASSWORD = '516201'
+const MASTER_PASSWORD = '000000'
 const BISTU_ID = 'bistu'
 
 exports.main = async (event, context) => {
