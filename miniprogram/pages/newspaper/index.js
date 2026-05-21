@@ -240,7 +240,7 @@ Page({
             this.setData({
                 foldVisible: true,
                 foldDirection: direction,
-                foldStyle: `top: ${this.data.readerTop + 9}px; bottom: 12px; width: ${width}px; opacity: ${opacity};`,
+                foldStyle: `top: ${this.data.readerTop + 7}px; bottom: 7px; width: ${width}px; opacity: ${opacity};`,
             });
         }
     },
@@ -255,7 +255,7 @@ Page({
         if (this.foldTimer)
             clearTimeout(this.foldTimer);
         this.setData({
-            foldStyle: `top: ${this.data.readerTop + 9}px; bottom: 12px; width: 42px; opacity: 0.06;`,
+            foldStyle: `top: ${this.data.readerTop + 7}px; bottom: 7px; width: 34px; opacity: 0.05;`,
         });
         this.foldTimer = setTimeout(() => {
             this.setData({
@@ -305,14 +305,14 @@ Page({
         const width = this.data.canvasWidth;
         const height = this.data.canvasHeight;
         const top = this.data.readerTop;
-        const x = 12;
+        const x = 7;
         const y = top;
-        const paperWidth = width - 24;
-        const paperHeight = height - top - 12;
+        const paperWidth = width - 14;
+        const paperHeight = height - top - 7;
         const clamped = Math.max(0.02, Math.min(1, progress));
-        const foldWidth = 42 + paperWidth * 0.82 * clamped;
+        const foldWidth = 34 + paperWidth * 0.86 * clamped;
         ctx.clearRect(0, 0, width, height);
-        ctx.setFillStyle(`rgba(0, 0, 0, ${0.06 + clamped * 0.18})`);
+        ctx.setFillStyle(`rgba(0, 0, 0, ${0.035 + clamped * 0.18})`);
         ctx.fillRect(x, y, paperWidth, paperHeight);
         if (direction === 'next') {
             this.drawRightTurnSheet(ctx, x, y, paperWidth, paperHeight, foldWidth, clamped, targetIndex);
@@ -325,18 +325,19 @@ Page({
     drawRightTurnSheet(ctx, x, y, paperWidth, paperHeight, foldWidth, progress, targetIndex) {
         const right = x + paperWidth;
         const foldLeft = right - foldWidth;
-        const curve = 22 + progress * 42;
-        const shadow = ctx.createLinearGradient(foldLeft - 28, y, foldLeft + 46, y);
+        const curve = 14 + progress * 32;
+        const shadow = ctx.createLinearGradient(foldLeft - 16, y, foldLeft + 34, y);
         shadow.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        shadow.addColorStop(0.58, `rgba(0, 0, 0, ${0.14 + progress * 0.18})`);
+        shadow.addColorStop(0.46, `rgba(0, 0, 0, ${0.18 + progress * 0.22})`);
         shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.setFillStyle(shadow);
-        ctx.fillRect(foldLeft - 32, y + 4, 96, paperHeight - 8);
+        ctx.fillRect(foldLeft - 18, y + 2, 64, paperHeight - 4);
         const back = ctx.createLinearGradient(foldLeft, y, right, y);
-        back.addColorStop(0, '#f7f7f7');
-        back.addColorStop(0.42, '#ffffff');
-        back.addColorStop(0.74, '#eeeeee');
-        back.addColorStop(1, '#d8d8d8');
+        back.addColorStop(0, '#deded9');
+        back.addColorStop(0.13, '#f8f8f4');
+        back.addColorStop(0.56, '#f6f6f2');
+        back.addColorStop(0.86, '#e8e8e3');
+        back.addColorStop(1, '#c9c9c3');
         ctx.setFillStyle(back);
         ctx.beginPath();
         ctx.moveTo(right, y);
@@ -345,9 +346,10 @@ Page({
         ctx.quadraticCurveTo(foldLeft + curve, y + paperHeight * 0.52, foldLeft + 10, y);
         ctx.closePath();
         ctx.fill();
-        this.drawTurnContent(ctx, foldLeft + 24, y + 25, foldWidth - 48, targetIndex, true);
-        ctx.setStrokeStyle(`rgba(0, 0, 0, ${0.28 + progress * 0.22})`);
-        ctx.setLineWidth(2);
+        this.drawTurnFibers(ctx, foldLeft + 9, y + 10, foldWidth - 18, paperHeight - 20);
+        this.drawTurnContent(ctx, foldLeft + 18, y + 22, foldWidth - 36, targetIndex, true);
+        ctx.setStrokeStyle(`rgba(0, 0, 0, ${0.32 + progress * 0.2})`);
+        ctx.setLineWidth(1.5);
         ctx.beginPath();
         ctx.moveTo(foldLeft + 10, y);
         ctx.quadraticCurveTo(foldLeft + curve, y + paperHeight * 0.52, foldLeft + 10, y + paperHeight);
@@ -355,18 +357,19 @@ Page({
     },
     drawLeftTurnSheet(ctx, x, y, paperHeight, foldWidth, progress, targetIndex) {
         const foldRight = x + foldWidth;
-        const curve = 22 + progress * 42;
-        const shadow = ctx.createLinearGradient(foldRight - 46, y, foldRight + 28, y);
+        const curve = 14 + progress * 32;
+        const shadow = ctx.createLinearGradient(foldRight - 34, y, foldRight + 16, y);
         shadow.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        shadow.addColorStop(0.42, `rgba(0, 0, 0, ${0.14 + progress * 0.18})`);
+        shadow.addColorStop(0.54, `rgba(0, 0, 0, ${0.18 + progress * 0.22})`);
         shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.setFillStyle(shadow);
-        ctx.fillRect(foldRight - 64, y + 4, 96, paperHeight - 8);
+        ctx.fillRect(foldRight - 46, y + 2, 64, paperHeight - 4);
         const back = ctx.createLinearGradient(x, y, foldRight, y);
-        back.addColorStop(0, '#d8d8d8');
-        back.addColorStop(0.26, '#eeeeee');
-        back.addColorStop(0.58, '#ffffff');
-        back.addColorStop(1, '#f7f7f7');
+        back.addColorStop(0, '#c9c9c3');
+        back.addColorStop(0.14, '#e8e8e3');
+        back.addColorStop(0.44, '#f6f6f2');
+        back.addColorStop(0.87, '#f8f8f4');
+        back.addColorStop(1, '#deded9');
         ctx.setFillStyle(back);
         ctx.beginPath();
         ctx.moveTo(x, y);
@@ -375,12 +378,30 @@ Page({
         ctx.lineTo(x, y + paperHeight);
         ctx.closePath();
         ctx.fill();
-        this.drawTurnContent(ctx, x + 24, y + 25, foldWidth - 48, targetIndex, false);
-        ctx.setStrokeStyle(`rgba(0, 0, 0, ${0.28 + progress * 0.22})`);
-        ctx.setLineWidth(2);
+        this.drawTurnFibers(ctx, x + 9, y + 10, foldWidth - 18, paperHeight - 20);
+        this.drawTurnContent(ctx, x + 18, y + 22, foldWidth - 36, targetIndex, false);
+        ctx.setStrokeStyle(`rgba(0, 0, 0, ${0.32 + progress * 0.2})`);
+        ctx.setLineWidth(1.5);
         ctx.beginPath();
         ctx.moveTo(foldRight - 10, y);
         ctx.quadraticCurveTo(foldRight - curve, y + paperHeight * 0.52, foldRight - 10, y + paperHeight);
+        ctx.stroke();
+    },
+    drawTurnFibers(ctx, x, y, width, height) {
+        const safeWidth = Math.max(48, width);
+        ctx.setLineWidth(1);
+        ctx.setStrokeStyle('rgba(0, 0, 0, 0.032)');
+        for (let index = 0; index < 12; index += 1) {
+            const lineY = y + 12 + index * Math.max(12, height / 14);
+            ctx.beginPath();
+            ctx.moveTo(x, lineY);
+            ctx.lineTo(x + safeWidth, lineY + (index % 2 === 0 ? 0.8 : -0.6));
+            ctx.stroke();
+        }
+        ctx.setStrokeStyle('rgba(179, 25, 33, 0.045)');
+        ctx.beginPath();
+        ctx.moveTo(x + 8, y + 18);
+        ctx.lineTo(x + Math.min(safeWidth, 88), y + 18);
         ctx.stroke();
     },
     drawTurnContent(ctx, x, y, width, targetIndex, alignLeft) {
@@ -392,6 +413,8 @@ Page({
         ctx.setFillStyle('#b31921');
         ctx.setFontSize(10);
         ctx.fillText(label, textX, y);
+        ctx.setFillStyle('rgba(0, 0, 0, 0.12)');
+        ctx.fillText(headline, textX + (alignLeft ? 0.5 : -0.5), y + 34.5);
         ctx.setFillStyle('#0b0b0b');
         ctx.setFontSize(targetIndex === 1 ? 24 : 22);
         ctx.fillText(headline, textX, y + 34);
