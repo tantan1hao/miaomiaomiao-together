@@ -2,14 +2,15 @@
   class="reader-page"
   style="padding-top: {{readerTop}}px;"
   bindtouchstart="onReaderTouchStart"
-  bindtouchmove="onReaderTouchMove"
+  catchtouchmove="onReaderTouchMove"
   bindtouchend="onReaderTouchEnd"
   bindtouchcancel="onReaderTouchEnd"
 >
   <swiper
     class="edition-swiper"
     current="{{currentIndex}}"
-    duration="460"
+    duration="0"
+    disable-touch="{{true}}"
     easing-function="easeInOutCubic"
     bindchange="onSwiperChange"
   >
@@ -272,7 +273,7 @@
     class="page-turn-canvas"
     style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
     bindtouchstart="onReaderTouchStart"
-    bindtouchmove="onReaderTouchMove"
+    catchtouchmove="onReaderTouchMove"
     bindtouchend="onReaderTouchEnd"
     bindtouchcancel="onReaderTouchEnd"
   ></canvas>

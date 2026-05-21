@@ -171,6 +171,8 @@ Page({
     },
     onSwiperChange(event) {
         const currentIndex = Number(event.detail.current || 0);
+        if (currentIndex === this.data.currentIndex)
+            return;
         this.setData({
             currentIndex,
             pageNumber: formatTwo(currentIndex + 1),
@@ -191,6 +193,8 @@ Page({
     },
     onReaderTouchStart(event) {
         const touch = event.touches[0];
+        if (!touch)
+            return;
         if (this.foldTimer)
             clearTimeout(this.foldTimer);
         if (this.turnTimer)
@@ -205,6 +209,8 @@ Page({
     },
     onReaderTouchMove(event) {
         const touch = event.touches[0];
+        if (!touch)
+            return;
         const dx = touch.clientX - this.dragStartX;
         const dy = touch.clientY - this.dragStartY;
         this.lastTouchX = touch.clientX;
@@ -267,10 +273,11 @@ Page({
         }, 180);
     },
     getKeyTurnTarget(direction) {
-        if (this.data.currentIndex === 0 && direction === 'next')
-            return 1;
-        if (this.data.currentIndex === 1 && direction === 'prev')
-            return 0;
+        const currentIndex = Number(this.data.currentIndex || 0);
+        if (direction === 'next')
+            return currentIndex < EDITION_COUNT - 1 ? currentIndex + 1 : -1;
+        if (direction === 'prev')
+            return currentIndex > 0 ? currentIndex - 1 : -1;
         return -1;
     },
     animateKeyTurn(startProgress, endProgress, direction, targetIndex) {
@@ -406,8 +413,10 @@ Page({
     },
     drawTurnContent(ctx, x, y, width, targetIndex, alignLeft) {
         const safeWidth = Math.max(90, width);
-        const headline = targetIndex === 1 ? '今日风味榜' : '明天吃什么日报';
-        const label = targetIndex === 1 ? 'RANKING' : 'FRONT PAGE';
+        const pageTitles = ['明天吃什么日报', '今日风味榜', '把新菜写进明天', '公告与分类索引'];
+        const pageLabels = ['FRONT PAGE', 'RANKING', 'SUBMISSION', 'CLASSIFIEDS'];
+        const headline = pageTitles[targetIndex] || pageTitles[0];
+        const label = pageLabels[targetIndex] || pageLabels[0];
         const textX = alignLeft ? x : x + safeWidth;
         ctx.setTextAlign(alignLeft ? 'left' : 'right');
         ctx.setFillStyle('#b31921');
@@ -432,9 +441,13 @@ Page({
         ctx.stroke();
         ctx.setFillStyle('#0b0b0b');
         ctx.setFontSize(12);
-        const lines = targetIndex === 1
-            ? ['名次   菜品           评分', '01    黄焖鸡米饭     4.9', '02    麻辣香锅       4.7', '03    桂林米粉       4.6']
-            : ['校园食堂独立观察', '白纸黑字红色点缀', '彩色菜品图片保留'];
+        const previewLines = [
+            ['校园食堂独立观察', '头版头条与风味短讯', '白纸黑字绿色点缀'],
+            ['名次   菜品           评分', '01    黄焖鸡米饭     4.9', '02    麻辣香锅       4.7', '03    桂林米粉       4.6'],
+            ['投稿单 / 图片 / 窗口', '菜名 分类 楼层 描述', '进入明天版面'],
+            ['公告栏 / 分类索引', '刷新今日版面', '回到头版'],
+        ];
+        const lines = previewLines[targetIndex] || previewLines[0];
         lines.forEach((line, index) => {
             ctx.fillText(line, textX, y + 86 + index * 24);
         });
