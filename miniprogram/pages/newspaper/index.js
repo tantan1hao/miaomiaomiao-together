@@ -186,9 +186,31 @@ Page({
         const target = Number(event.currentTarget.dataset.target);
         if (Number.isNaN(target))
             return;
+        this.turnToEdition(target);
+    },
+    turnToEdition(target) {
+        const targetIndex = Math.max(0, Math.min(EDITION_COUNT - 1, Number(target || 0)));
+        const currentIndex = Number(this.data.currentIndex || 0);
+        if (targetIndex === currentIndex)
+            return;
+        const direction = targetIndex > currentIndex ? 'next' : 'prev';
+        const initialProgress = 0.04;
+        if (this.foldTimer)
+            clearTimeout(this.foldTimer);
+        if (this.turnTimer)
+            clearInterval(this.turnTimer);
+        this.turnDirection = direction;
+        this.turnTargetIndex = targetIndex;
+        this.turnProgress = initialProgress;
         this.setData({
-            currentIndex: target,
-            pageNumber: formatTwo(target + 1),
+            turnCanvasVisible: true,
+            foldVisible: false,
+            foldDirection: '',
+            foldStyle: '',
+        });
+        wx.nextTick(() => {
+            this.renderKeyTurnCanvas(initialProgress, direction, targetIndex);
+            this.animateKeyTurn(initialProgress, 1, direction, targetIndex);
         });
     },
     onReaderTouchStart(event) {
@@ -282,7 +304,7 @@ Page({
     },
     animateKeyTurn(startProgress, endProgress, direction, targetIndex) {
         let progress = startProgress;
-        const step = endProgress > startProgress ? 0.08 : -0.08;
+        const step = endProgress > startProgress ? 0.05 : -0.05;
         if (this.turnTimer)
             clearInterval(this.turnTimer);
         this.turnTimer = setInterval(() => {

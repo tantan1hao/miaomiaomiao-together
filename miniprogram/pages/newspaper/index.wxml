@@ -1,10 +1,10 @@
 <view
   class="reader-page"
   style="padding-top: {{readerTop}}px;"
-  bindtouchstart="onReaderTouchStart"
-  catchtouchmove="onReaderTouchMove"
-  bindtouchend="onReaderTouchEnd"
-  bindtouchcancel="onReaderTouchEnd"
+  capture-bind:touchstart="onReaderTouchStart"
+  capture-catch:touchmove="onReaderTouchMove"
+  capture-bind:touchend="onReaderTouchEnd"
+  capture-bind:touchcancel="onReaderTouchEnd"
 >
   <swiper
     class="edition-swiper"
@@ -272,10 +272,10 @@
     canvas-id="pageTurnCanvas"
     class="page-turn-canvas"
     style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
-    bindtouchstart="onReaderTouchStart"
-    catchtouchmove="onReaderTouchMove"
-    bindtouchend="onReaderTouchEnd"
-    bindtouchcancel="onReaderTouchEnd"
+    capture-bind:touchstart="onReaderTouchStart"
+    capture-catch:touchmove="onReaderTouchMove"
+    capture-bind:touchend="onReaderTouchEnd"
+    capture-bind:touchcancel="onReaderTouchEnd"
   ></canvas>
 
   <view wx:if="{{foldVisible}}" class="page-fold page-fold-{{foldDirection}}" style="{{foldStyle}}"></view>
