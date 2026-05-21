@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/newspaper/index",
+    "pages/dishes/index",
     "pages/admin/index",
     "pages/masterAdmin/index",
     "pages/suggestion/index"

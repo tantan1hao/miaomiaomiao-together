@@ -32,6 +32,24 @@
     </view>
   </view>
 
+  <view class="dish-guide" bindtap="goToDishes">
+    <view class="dish-guide-copy">
+      <text class="dish-guide-kicker">CAMPUS FLAVOR GUIDE</text>
+      <text class="dish-guide-title">食堂风味榜</text>
+      <text class="dish-guide-subtitle">{{currentSchool.name || '北京信息科技大学'}}</text>
+    </view>
+    <view class="dish-guide-action">进入</view>
+  </view>
+
+  <view class="paper-guide" bindtap="goToNewspaper">
+    <view class="paper-guide-copy">
+      <text class="paper-guide-kicker">DAILY PAPER</text>
+      <text class="paper-guide-title">校园食报</text>
+      <text class="paper-guide-subtitle">左右滑动翻阅纸质版阅读页</text>
+    </view>
+    <view class="paper-guide-fold"></view>
+  </view>
+
   <scroll-view scroll-x class="canteen-tabs" enhanced show-scrollbar="{{false}}">
     <view class="canteen-tabs-inner">
       <view class="tab-item {{fmt.includes(selectedCanteens, 'all') ? 'active' : ''}}" data-canteen="all" bindtap="onCanteenChange">

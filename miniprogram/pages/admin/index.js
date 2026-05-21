@@ -1,3 +1,5 @@
+const api = require('../../utils/api')
+
 Page({
   data: {
     schoolId: '',
@@ -32,7 +34,7 @@ Page({
   onLoad(options) {
     const schoolId = options.schoolId || 'bistu'
     const schoolName = decodeURIComponent(options.schoolName || '北京信息科技大学')
-    
+
     this.setData({ schoolId, schoolName })
     this.loadSchoolInfo()
     this.loadCanteenData()
@@ -45,13 +47,10 @@ Page({
       this.setData({ schoolAdmin: '西风漂流' })
       return
     }
-    
+
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { action: 'getSchools' }
-      })
-      
+      const res = await api.callFunction({ action: 'getSchools' })
+
       if (res.result && res.result.success && res.result.data) {
         const school = res.result.data.find(s => s._id === this.data.schoolId)
         if (school && school.admin) {
@@ -65,16 +64,13 @@ Page({
 
   async loadCanteenData() {
     wx.showLoading({ title: '加载中...' })
-    
+
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { 
+      const res = await api.callFunction({
           action: 'getCanteenData',
           schoolId: this.data.schoolId
-        }
-      })
-      
+        })
+
       if (res.result && res.result.success && res.result.data && res.result.data.length > 0) {
         const canteenList = res.result.data.map(canteen => {
           let totalShops = 0
@@ -104,19 +100,16 @@ Page({
       console.log('加载数据失败', e)
       await this.initDefaultData()
     }
-    
+
     wx.hideLoading()
   },
 
   async loadAnnouncement() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { 
+      const res = await api.callFunction({
           action: 'getAnnouncement',
           schoolId: this.data.schoolId
-        }
-      })
+        })
       if (res.result && res.result.success) {
         this.setData({ announcement: res.result.data })
       }
@@ -127,13 +120,10 @@ Page({
 
   async loadSchoolStats() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { 
+      const res = await api.callFunction({
           action: 'getSchoolStats',
           schoolId: this.data.schoolId
-        }
-      })
+        })
       if (res.result && res.result.success) {
         this.setData({ schoolStats: res.result.data })
       }
@@ -148,14 +138,11 @@ Page({
 
   async saveAnnouncement() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      const res = await api.callFunction({
           action: 'setAnnouncement',
           schoolId: this.data.schoolId,
           data: { content: this.data.announcement }
-        }
-      })
+        })
       if (res.result && res.result.success) {
         wx.showToast({ title: '保存成功', icon: 'success' })
       } else {
@@ -169,14 +156,11 @@ Page({
 
   async initDefaultData() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { 
+      const res = await api.callFunction({
           action: 'initCanteenData',
           schoolId: this.data.schoolId
-        }
-      })
-      
+        })
+
       if (res.result && res.result.success) {
         await this.loadCanteenData()
       }
@@ -240,25 +224,23 @@ Page({
     const { canteen, floor } = e.currentTarget.dataset
     const canteenItem = this.data.canteenList.find(c => c._id === canteen._id)
     if (!canteenItem) return
-    
+
     const floorItem = canteenItem.floors.find(f => f.name === floor)
     if (!floorItem) return
-    
+
     const shopName = floorItem.newShopName
     if (!shopName || !shopName.trim()) {
       wx.showToast({ title: '请输入店铺名称', icon: 'none' })
       return
     }
-    
+
     if (floorItem.shops.includes(shopName.trim())) {
       wx.showToast({ title: '该店铺已存在', icon: 'none' })
       return
     }
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      const res = await api.callFunction({
           action: 'addShop',
           schoolId: this.data.schoolId,
           data: {
@@ -266,8 +248,7 @@ Page({
             floorName: floor,
             shopName: shopName.trim()
           }
-        }
-      })
+        })
 
       if (res.result && res.result.success) {
         const newShops = [...floorItem.shops, shopName.trim()]
@@ -299,7 +280,7 @@ Page({
 
   async deleteShop(e) {
     const { canteen, floor, shop } = e.currentTarget.dataset
-    
+
     wx.showModal({
       title: '确认删除',
       content: `确定要删除"${shop}"吗？`,
@@ -307,14 +288,12 @@ Page({
         if (res.confirm) {
           const canteenItem = this.data.canteenList.find(c => c._id === canteen._id)
           if (!canteenItem) return
-          
+
           const floorItem = canteenItem.floors.find(f => f.name === floor)
           if (!floorItem) return
-          
+
           try {
-            const result = await wx.cloud.callFunction({
-              name: 'canteenService',
-              data: {
+            const result = await api.callFunction({
                 action: 'deleteShop',
                 schoolId: this.data.schoolId,
                 data: {
@@ -322,8 +301,7 @@ Page({
                   floorName: floor,
                   shopName: shop
                 }
-              }
-            })
+              })
 
             if (result.result && result.result.success) {
               const newShops = floorItem.shops.filter(s => s !== shop)
@@ -384,14 +362,11 @@ Page({
     wx.showLoading({ title: '添加中...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      const res = await api.callFunction({
           action: 'addCanteen',
           schoolId: this.data.schoolId,
           data: { name }
-        }
-      })
+        })
 
       if (res.result && res.result.success) {
         wx.showToast({ title: '添加成功', icon: 'success' })
@@ -410,7 +385,7 @@ Page({
 
   deleteCanteen(e) {
     const canteen = e.currentTarget.dataset.canteen
-    
+
     wx.showModal({
       title: '确认删除',
       content: `确定要删除"${canteen.name}"吗？该食堂下的所有店铺都将被删除。`,
@@ -418,16 +393,13 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           wx.showLoading({ title: '删除中...' })
-          
+
           try {
-            const result = await wx.cloud.callFunction({
-              name: 'canteenService',
-              data: {
+            const result = await api.callFunction({
                 action: 'deleteCanteen',
                 schoolId: this.data.schoolId,
                 data: { canteenId: canteen._id }
-              }
-            })
+              })
 
             if (result.result && result.result.success) {
               wx.showToast({ title: '删除成功', icon: 'success' })
@@ -439,7 +411,7 @@ Page({
             console.log('删除食堂失败', err)
             wx.showToast({ title: '删除失败', icon: 'error' })
           }
-          
+
           wx.hideLoading()
         }
       }
@@ -477,17 +449,14 @@ Page({
     wx.showLoading({ title: '添加中...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      const res = await api.callFunction({
           action: 'addFloor',
           schoolId: this.data.schoolId,
           data: {
             canteenId: this.data.currentCanteenId,
             floorName
           }
-        }
-      })
+        })
 
       if (res.result && res.result.success) {
         wx.showToast({ title: '添加成功', icon: 'success' })
@@ -506,7 +475,7 @@ Page({
 
   deleteFloor(e) {
     const { canteen, floor } = e.currentTarget.dataset
-    
+
     wx.showModal({
       title: '确认删除',
       content: `确定要删除"${floor.name}"吗？该楼层下的所有店铺都将被删除。`,
@@ -514,19 +483,16 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           wx.showLoading({ title: '删除中...' })
-          
+
           try {
-            const result = await wx.cloud.callFunction({
-              name: 'canteenService',
-              data: {
+            const result = await api.callFunction({
                 action: 'deleteFloor',
                 schoolId: this.data.schoolId,
                 data: {
                   canteenId: canteen._id,
                   floorName: floor.name
                 }
-              }
-            })
+              })
 
             if (result.result && result.result.success) {
               wx.showToast({ title: '删除成功', icon: 'success' })
@@ -538,7 +504,7 @@ Page({
             console.log('删除楼层失败', err)
             wx.showToast({ title: '删除失败', icon: 'error' })
           }
-          
+
           wx.hideLoading()
         }
       }
@@ -552,7 +518,7 @@ Page({
   async showShopEditModal(e) {
     const { canteen, floor, shop } = e.currentTarget.dataset
     const shopKey = `${canteen.name}-${floor}-${shop}`
-    
+
     this.setData({
       showShopEditModal: true,
       currentEditShop: shop,
@@ -567,17 +533,14 @@ Page({
         tagsStr: ''
       }
     })
-    
+
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      const res = await api.callFunction({
           action: 'getShopStats',
           schoolId: this.data.schoolId,
           shopKey: shopKey
-        }
-      })
-      
+        })
+
       if (res.result && res.result.success && res.result.data) {
         const data = res.result.data
         this.setData({
@@ -624,22 +587,20 @@ Page({
 
   async saveShopEdit() {
     const { currentEditShopKey, shopEditData } = this.data
-    
+
     if (!currentEditShopKey) {
       wx.showToast({ title: '店铺信息错误', icon: 'none' })
       return
     }
-    
+
     wx.showLoading({ title: '保存中...' })
-    
+
     try {
-      const tags = shopEditData.tagsStr 
+      const tags = shopEditData.tagsStr
         ? shopEditData.tagsStr.split(',').map(t => t.trim()).filter(t => t)
         : []
-      
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+
+      const res = await api.callFunction({
           action: 'updateShopInfo',
           schoolId: this.data.schoolId,
           data: {
@@ -652,11 +613,10 @@ Page({
             maxPrice: shopEditData.maxPrice,
             tags: tags
           }
-        }
-      })
-      
+        })
+
       wx.hideLoading()
-      
+
       if (res.result && res.result.success) {
         wx.showToast({ title: '保存成功', icon: 'success' })
         this.closeShopEditModal()

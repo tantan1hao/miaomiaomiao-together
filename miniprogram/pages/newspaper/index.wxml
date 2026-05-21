@@ -1,0 +1,332 @@
+<view
+  class="reader-page"
+  style="padding-top: {{readerTop}}px;"
+  bindtouchstart="onReaderTouchStart"
+  bindtouchmove="onReaderTouchMove"
+  bindtouchend="onReaderTouchEnd"
+  bindtouchcancel="onReaderTouchEnd"
+>
+  <swiper
+    class="edition-swiper"
+    current="{{currentIndex}}"
+    duration="460"
+    easing-function="easeInOutCubic"
+    bindchange="onSwiperChange"
+  >
+    <swiper-item>
+      <view class="paper-sheet front-edition">
+        <view class="paper-grain"></view>
+        <view class="paper-inner">
+          <view class="masthead">
+            <view class="issue-strip">
+              <text>校园食堂独立观察</text>
+              <text>{{editionDate}}</text>
+              <text>{{networkNote}}</text>
+            </view>
+            <view class="masthead-title">明天吃什么日报</view>
+            <view class="masthead-subtitle">MINGTIAN EAT WHAT DAILY · WEIXIN MINI PROGRAM</view>
+            <view class="double-rule"></view>
+          </view>
+
+          <view class="front-layout dense-front">
+            <view class="front-body">
+              <view class="front-main">
+                <view class="lead-story newspaper-lead">
+                  <text class="kicker">头版头条</text>
+                  <text class="front-headline">{{leadDish.headline}}</text>
+                  <view class="story-meta">
+                    <text>{{leadDish.placeText}}</text>
+                    <text>{{leadDish.ratingText}}</text>
+                  </view>
+                  <view class="news-photo lead-photo">
+                    <image wx:if="{{leadDish.imageUrl}}" src="{{leadDish.imageUrl}}" mode="aspectFill" />
+                    <view wx:else class="halftone-photo">
+                      <text class="photo-score">{{leadDish.scoreText}}</text>
+                      <text class="photo-name">{{leadDish.name}}</text>
+                    </view>
+                    <view class="photo-caption">
+                      <text>{{leadDish.name}}</text>
+                      <text>{{leadDish.scoreText}} 分</text>
+                    </view>
+                  </view>
+                  <text class="lead-deck">{{leadDish.description}}</text>
+                </view>
+
+                <view class="brief-columns">
+                  <view class="brief-item">
+                    <text class="brief-title">{{featureDish.name}}</text>
+                    <text class="brief-text">{{featureDish.description}}</text>
+                  </view>
+                  <view class="brief-item">
+                    <text class="brief-title">{{thirdDish.name}}</text>
+                    <text class="brief-text">{{thirdDish.description}}</text>
+                  </view>
+                </view>
+              </view>
+
+              <view class="front-sidebar">
+                <view class="side-module ranking-teaser" bindtap="goEdition" data-target="1">
+                  <text class="side-label">榜单</text>
+                  <text class="side-title">今日风味榜</text>
+                  <view class="mini-rank">
+                    <text>01</text>
+                    <text>{{leadDish.name}}</text>
+                    <text>{{leadDish.scoreText}}</text>
+                  </view>
+                  <view class="mini-rank">
+                    <text>02</text>
+                    <text>{{featureDish.name}}</text>
+                    <text>{{featureDish.scoreText}}</text>
+                  </view>
+                  <view class="mini-rank">
+                    <text>03</text>
+                    <text>{{thirdDish.name}}</text>
+                    <text>{{thirdDish.scoreText}}</text>
+                  </view>
+                </view>
+
+                <view class="side-module submit-teaser" bindtap="openSubmitSheet">
+                  <text class="side-label">征稿</text>
+                  <text class="side-title">拍照投稿</text>
+                  <text class="side-text">菜名、窗口、楼层和一句口味描述，投进明天版面。</text>
+                </view>
+
+                <view class="side-module notice-teaser" bindtap="goEdition" data-target="3">
+                  <text class="side-label">公告</text>
+                  <text class="side-title">食堂短讯</text>
+                  <text class="side-text">{{announcementText}}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="front-wire">
+              <view class="wire-item" bindtap="goEdition" data-target="2">
+                <text>投稿版</text>
+                <text>新菜征集</text>
+              </view>
+              <view class="wire-item" bindtap="refreshData">
+                <text>刷新</text>
+                <text>重排版面</text>
+              </view>
+              <view class="wire-item" bindtap="goEdition" data-target="3">
+                <text>公告栏</text>
+                <text>分类索引</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="paper-footer">
+            <text>第 01 版</text>
+            <text>滑动翻版 · 点击栏目进入</text>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+
+    <swiper-item>
+      <view class="paper-sheet ranking-edition">
+        <view class="paper-grain"></view>
+        <view class="paper-inner">
+          <view class="masthead compact">
+            <view class="issue-strip">
+              <text>榜单版</text>
+              <text>{{editionDate}}</text>
+              <text>{{networkNote}}</text>
+            </view>
+            <view class="section-title">今日风味榜</view>
+            <view class="double-rule"></view>
+          </view>
+
+          <view class="ranking-table newspaper-table">
+            <view class="ranking-row top-row">
+              <text class="rank-col">名次</text>
+              <text class="dish-col">菜品与窗口</text>
+              <text class="score-col">评分</text>
+            </view>
+            <view class="ranking-row" wx:for="{{rankingRows}}" wx:key="id">
+              <text class="rank-col rank-number">{{index + 1}}</text>
+              <view class="dish-col dish-info">
+                <text class="dish-name">{{item.name}}</text>
+                <text class="dish-place">{{item.placeText}}</text>
+                <view class="rating-strip" wx:if="{{item.canRate}}">
+                  <text
+                    wx:for="{{ratingScoreOptions}}"
+                    wx:for-item="score"
+                    wx:key="*this"
+                    class="rating-button"
+                    data-dish-id="{{item.id}}"
+                    data-score="{{score}}"
+                    bindtap="onRateTap"
+                  >{{score}}</text>
+                </view>
+              </view>
+              <view class="score-col score-info">
+                <text class="score-number">{{item.scoreText}}</text>
+                <text class="score-meta">{{item.ratingText}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="paper-footer">
+            <text>第 02 版</text>
+            <text bindtap="openSubmitSheet">我要投稿</text>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+
+    <swiper-item>
+      <view class="paper-sheet submit-edition">
+        <view class="paper-grain"></view>
+        <view class="paper-inner">
+          <view class="masthead compact">
+            <view class="issue-strip">
+              <text>投稿版</text>
+              <text>{{editionDate}}</text>
+              <text>单图 5MB 内</text>
+            </view>
+            <view class="section-title">把新菜写进明天</view>
+            <view class="double-rule"></view>
+          </view>
+
+          <view class="submit-newspaper newspaper-submit">
+            <view class="submit-lead">
+              <text class="kicker">征稿启事</text>
+              <text class="submit-headline">食堂窗口很多，好吃的需要被看见。</text>
+              <text class="lead-deck">点击下方投稿单，选择图片，补上菜名、楼层、窗口和一句描述。通过同一套接口进入榜单，后续可由管理员上下架。</text>
+            </view>
+
+            <view class="coupon" bindtap="openSubmitSheet">
+              <view class="coupon-border">
+                <text class="coupon-kicker">SUBMISSION FORM</text>
+                <text class="coupon-title">打开投稿表单</text>
+                <text class="coupon-text">菜名 / 分类 / 楼层 / 窗口 / 口味描述 / 图片</text>
+              </view>
+            </view>
+
+            <view class="editor-note">
+              <text>编辑部提示</text>
+              <text>描述尽量短，像报纸导语一样只写重点。图片会进入上传接口，展示在后续版面中。</text>
+            </view>
+          </view>
+
+          <view class="paper-footer">
+            <text>第 03 版</text>
+            <text>点击投稿单</text>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+
+    <swiper-item>
+      <view class="paper-sheet notice-edition">
+        <view class="paper-grain"></view>
+        <view class="paper-inner">
+          <view class="masthead compact">
+            <view class="issue-strip">
+              <text>公告版</text>
+              <text>{{editionDate}}</text>
+              <text>校园食堂</text>
+            </view>
+            <view class="section-title">公告与分类索引</view>
+            <view class="double-rule"></view>
+          </view>
+
+          <view class="notice-layout newspaper-notice">
+            <view class="announcement-box">
+              <text class="box-label">ANNOUNCEMENT</text>
+              <text class="announcement-text">{{announcementText}}</text>
+            </view>
+
+            <view class="category-box">
+              <text class="box-label">CLASSIFIEDS</text>
+              <view class="category-grid">
+                <text wx:for="{{categoryRows}}" wx:key="id" class="category-chip">{{item.name}}</text>
+              </view>
+            </view>
+
+            <view class="notice-actions">
+              <view bindtap="refreshData">
+                <text>重新整理今日版面</text>
+                <text>REFRESH</text>
+              </view>
+              <view bindtap="goEdition" data-target="0">
+                <text>回到头版</text>
+                <text>FRONT PAGE</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="paper-footer">
+            <text>第 04 版</text>
+            <text>{{pageNumber}} / {{pageTotal}}</text>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <canvas
+    wx:if="{{turnCanvasVisible}}"
+    canvas-id="pageTurnCanvas"
+    class="page-turn-canvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+    bindtouchstart="onReaderTouchStart"
+    bindtouchmove="onReaderTouchMove"
+    bindtouchend="onReaderTouchEnd"
+    bindtouchcancel="onReaderTouchEnd"
+  ></canvas>
+
+  <view wx:if="{{foldVisible}}" class="page-fold page-fold-{{foldDirection}}" style="{{foldStyle}}"></view>
+
+  <view class="submit-mask" wx:if="{{showSubmitSheet}}" bindtap="closeSubmitSheet"></view>
+  <view class="submit-sheet" wx:if="{{showSubmitSheet}}">
+    <view class="sheet-header">
+      <view>
+        <text class="sheet-kicker">SUBMISSION FORM</text>
+        <text class="sheet-title">投递一道菜</text>
+      </view>
+      <text class="sheet-close" bindtap="closeSubmitSheet">×</text>
+    </view>
+
+    <view class="field">
+      <text class="field-label">菜品名称</text>
+      <input value="{{form.name}}" data-field="name" bindinput="onFormInput" placeholder="例如 黄焖鸡米饭" maxlength="40" />
+    </view>
+
+    <view class="field-grid">
+      <view class="field">
+        <text class="field-label">分类</text>
+        <input value="{{form.categoryName}}" data-field="categoryName" bindinput="onFormInput" placeholder="盖饭/粉面" maxlength="20" />
+      </view>
+      <view class="field">
+        <text class="field-label">楼层</text>
+        <input value="{{form.floorName}}" data-field="floorName" bindinput="onFormInput" placeholder="一楼" maxlength="20" />
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="field-label">店铺/窗口</text>
+      <input value="{{form.shopName}}" data-field="shopName" bindinput="onFormInput" placeholder="窗口名称" maxlength="40" />
+    </view>
+
+    <view class="field">
+      <text class="field-label">一句描述</text>
+      <textarea value="{{form.description}}" data-field="description" bindinput="onFormInput" placeholder="口味、份量、适合什么时候吃" maxlength="160" show-confirm-bar="{{false}}" />
+    </view>
+
+    <view class="image-picker" bindtap="chooseImage">
+      <image wx:if="{{imagePath}}" class="image-preview" src="{{imagePath}}" mode="aspectFill" />
+      <view wx:else class="image-empty">
+        <text>选择图片</text>
+        <text>单图 5MB 内</text>
+      </view>
+    </view>
+    <view class="image-meta" wx:if="{{imageName}}">
+      <text>{{imageName}}</text>
+      <text bindtap="clearImage">移除</text>
+    </view>
+
+    <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitDish">提交到明天版面</button>
+  </view>
+</view>

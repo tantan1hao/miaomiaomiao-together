@@ -1,3 +1,5 @@
+const api = require('../../utils/api')
+
 Page({
   data: {
     schoolList: [],
@@ -46,10 +48,7 @@ Page({
     wx.showLoading({ title: '加载中...' })
     
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { action: 'getSchools' }
-      })
+      const res = await api.callFunction({ action: 'getSchools' })
       
       if (res.result && res.result.success) {
         this.setData({ schoolList: res.result.data || [] })
@@ -64,10 +63,7 @@ Page({
 
   async loadAllSchoolStats() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { action: 'getAllSchoolStats' }
-      })
+      const res = await api.callFunction({ action: 'getAllSchoolStats' })
       
       if (res.result && res.result.success) {
         this.setData({ 
@@ -82,10 +78,7 @@ Page({
 
   async loadSuggestions() {
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { action: 'getSuggestions' }
-      })
+      const res = await api.callFunction({ action: 'getSuggestions' })
       
       if (res.result && res.result.success) {
         const suggestions = (res.result.data || []).map(item => {
@@ -203,10 +196,7 @@ Page({
         admin: admin ? admin.trim() : ''
       }
       
-      const res = await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: { action, data }
-      })
+      const res = await api.callFunction({ action, data })
       
       if (res.result && res.result.success) {
         if (!this.data.isEditing) {
@@ -261,13 +251,10 @@ Page({
           wx.showLoading({ title: '删除中...' })
           
           try {
-            const result = await wx.cloud.callFunction({
-              name: 'canteenService',
-              data: {
+            const result = await api.callFunction({
                 action: 'deleteSchool',
                 data: { schoolId: school._id }
-              }
-            })
+              })
             
             if (result.result && result.result.success) {
               wx.showToast({ title: '删除成功', icon: 'success' })
@@ -326,13 +313,10 @@ Page({
     const schoolOrders = this.data.schoolList.map(s => s._id)
     
     try {
-      await wx.cloud.callFunction({
-        name: 'canteenService',
-        data: {
+      await api.callFunction({
           action: 'updateSchoolOrder',
           data: { schoolOrders }
-        }
-      })
+        })
     } catch (e) {
       console.log('保存排序失败', e)
     }

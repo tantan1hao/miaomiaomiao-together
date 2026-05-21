@@ -100,6 +100,134 @@ page {
   margin-bottom: 50rpx;
 }
 
+.dish-guide {
+  width: 100%;
+  min-height: 164rpx;
+  margin: -18rpx 0 42rpx;
+  padding: 28rpx;
+  border-radius: 18rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #fff3d5 0%, #f7ffe3 48%, #dff8f1 100%);
+  box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.24);
+}
+
+.dish-guide:active {
+  transform: scale(0.99);
+}
+
+.dish-guide-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dish-guide-kicker {
+  font-size: 20rpx;
+  color: #e94f37;
+  font-weight: 800;
+  margin-bottom: 8rpx;
+}
+
+.dish-guide-title {
+  font-size: 42rpx;
+  line-height: 1.05;
+  color: #171717;
+  font-weight: 900;
+}
+
+.dish-guide-subtitle {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #57636b;
+  max-width: 480rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dish-guide-action {
+  width: 92rpx;
+  height: 64rpx;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #111116;
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.paper-guide {
+  position: relative;
+  width: 100%;
+  min-height: 150rpx;
+  margin: -20rpx 0 42rpx;
+  padding: 26rpx 30rpx;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #fffaf0;
+  border: 2rpx solid rgba(30, 27, 23, 0.14);
+  box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.2);
+}
+
+.paper-guide:active {
+  transform: scale(0.99);
+}
+
+.paper-guide::before {
+  content: '';
+  position: absolute;
+  left: 30rpx;
+  right: 30rpx;
+  top: 74rpx;
+  height: 2rpx;
+  background: rgba(30, 27, 23, 0.16);
+}
+
+.paper-guide-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.paper-guide-kicker {
+  font-size: 19rpx;
+  color: #9b1c1c;
+  font-weight: 900;
+  margin-bottom: 8rpx;
+}
+
+.paper-guide-title {
+  font-size: 48rpx;
+  line-height: 1;
+  color: #1e1b17;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+}
+
+.paper-guide-subtitle {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  color: #6c6257;
+}
+
+.paper-guide-fold {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-left: 86rpx solid transparent;
+  border-top: 86rpx solid rgba(30, 27, 23, 0.14);
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
