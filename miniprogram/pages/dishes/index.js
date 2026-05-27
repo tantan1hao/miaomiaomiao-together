@@ -1,11 +1,25 @@
 const api = require('../../utils/api')
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const DISH_PLACEHOLDER = '/images/dish-placeholder.svg'
+
+function buildDishHeadline(dish) {
+  const name = dish.name || '这道菜'
+  const count = Number(dish.ratingCount || 0)
+  if (dish.headline) return dish.headline
+  if (count >= 20) return `${name}收获${count}张食堂票，继续留在今日版面`
+  if (count > 0) return `${name}拿到${count}张新票，正在冲上风味榜`
+  if (dish.shopName) return `${dish.shopName}把${name}送上今日候选`
+  if (dish.categoryName) return `${name}登上${dish.categoryName}栏目，等待第一张票`
+  return `${name}成为今天的食堂头条候选`
+}
 
 function normalizeDish(dish, index) {
   return {
     ...dish,
     rank: index + 1,
+    imageUrl: dish.imageUrl || DISH_PLACEHOLDER,
+    headlineText: buildDishHeadline(dish),
     scoreText: Number(dish.avgScore || 0).toFixed(1),
     ratingText: `${dish.ratingCount || 0} 人评分`,
     placeText: [dish.canteenName, dish.floorName, dish.shopName].filter(Boolean).join(' · ') || '校园食堂'

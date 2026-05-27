@@ -1,6 +1,6 @@
 const API_BASE_STORAGE_KEY = 'dishApiBaseUrl'
 const TOKEN_STORAGE_KEY = 'dishUserToken'
-const DEFAULT_API_BASE_URL = 'http://127.0.0.1:3002/dish-api'
+const DEFAULT_API_BASE_URL = 'https://tantanzhang.cn/dish-api'
 
 function trimTrailingSlash(value) {
   return String(value || '').replace(/\/+$/, '')
@@ -118,6 +118,58 @@ async function announcement(schoolId) {
   return unwrap(body)
 }
 
+async function canteenData(schoolId = 'bistu') {
+  const body = await request('/miniprogram/call', {
+    method: 'POST',
+    data: { action: 'getCanteenData', schoolId }
+  })
+  return unwrap(body)
+}
+
+async function adminLogin(password) {
+  const body = await request('/admin/login', {
+    method: 'POST',
+    data: { password }
+  })
+  return unwrap(body)
+}
+
+async function dishes(schoolId, includeOffline = false) {
+  const body = await request(`/dishes${queryString({
+    schoolId,
+    includeOffline: includeOffline ? '1' : '0',
+    limit: 200
+  })}`)
+  return unwrap(body)
+}
+
+async function updateDish(token, dishId, patch) {
+  const body = await request(`/dishes/${dishId}`, {
+    method: 'PUT',
+    token,
+    data: patch
+  })
+  return unwrap(body)
+}
+
+async function setAnnouncement(token, schoolId, content) {
+  const body = await request('/announcements', {
+    method: 'PUT',
+    token,
+    data: { schoolId, content }
+  })
+  return unwrap(body)
+}
+
+async function createCategory(token, schoolId, name) {
+  const body = await request('/categories', {
+    method: 'POST',
+    token,
+    data: { schoolId, name }
+  })
+  return unwrap(body)
+}
+
 async function rateDish(token, dishId, score) {
   const body = await request('/ratings', {
     method: 'POST',
@@ -219,6 +271,12 @@ module.exports = {
   categories,
   rankings,
   announcement,
+  canteenData,
+  adminLogin,
+  dishes,
+  updateDish,
+  setAnnouncement,
+  createCategory,
   rateDish,
   uploadDish,
   login,

@@ -8,11 +8,11 @@
     "pages/suggestion/index"
   ],
   "window": {
-    "backgroundColor": "#1a1a2e",
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#1a1a2e",
+    "backgroundColor": "#eee9dd",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#eee9dd",
     "navigationBarTitleText": "今天吃什么",
-    "navigationBarTextStyle": "white"
+    "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",

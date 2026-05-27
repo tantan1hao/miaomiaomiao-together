@@ -13,6 +13,7 @@ import {
   UploadCloud
 } from 'lucide-react';
 import { api } from './api.js';
+import dishPlaceholder from './assets/dish-placeholder.svg';
 
 const fallbackSchools = [
   { _id: 'bistu', name: '北京信息科技大学', abbr: 'BISTU' }
@@ -34,6 +35,7 @@ const fallbackDishes = [
     canteenName: '一食堂',
     floorName: '一楼',
     shopName: '黄焖鸡米饭',
+    headline: '午饭前的稳妥答案仍然来自黄焖鸡窗口',
     description: '酱香浓郁，鸡肉和土豆都炖得软糯，适合作为不知道吃什么时的默认选择。',
     imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
     avgScore: 4.9,
@@ -47,6 +49,7 @@ const fallbackDishes = [
     canteenName: '一食堂',
     floorName: '一楼',
     shopName: '麻辣香锅',
+    headline: '麻辣香锅在多人拼单中继续占据显眼位置',
     description: '可自选荤素，辣度稳定，适合多人拼单。',
     imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=900&q=80',
     avgScore: 4.7,
@@ -60,6 +63,7 @@ const fallbackDishes = [
     canteenName: '二食堂',
     floorName: '一楼',
     shopName: '桂林米粉',
+    headline: '赶课同学把桂林米粉推上速度榜',
     description: '出餐快，汤粉和拌粉都适合赶课前后。',
     imageUrl: 'https://images.unsplash.com/photo-1555126634-323283e090fa?auto=format&fit=crop&w=900&q=80',
     avgScore: 4.6,
@@ -73,6 +77,7 @@ const fallbackDishes = [
     canteenName: '一食堂',
     floorName: '二楼',
     shopName: '酸菜鱼',
+    headline: '酸菜鱼靠一口酸辣守住午饭高峰',
     description: '酸辣口味更醒神，午餐时段人气稳定。',
     imageUrl: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=900&q=80',
     avgScore: 4.5,
@@ -96,19 +101,15 @@ function scoreText(value) {
   return Number(value || 0).toFixed(1);
 }
 
-function FoodPoster({ tone = 'gold' }) {
-  return (
-    <div className={cx('food-poster', `food-poster-${tone}`)} aria-hidden="true">
-      <div className="plate">
-        <span className="leaf" />
-        <span className="main-bite" />
-        <span className="sauce" />
-      </div>
-      <span className="stick one" />
-      <span className="stick two" />
-      <div className="caption">CANTEEN SPECIAL</div>
-    </div>
-  );
+function headlineForDish(dish) {
+  const name = dish.name || '这道菜';
+  const count = Number(dish.ratingCount || 0);
+  if (dish.headline) return dish.headline;
+  if (count >= 20) return `${name}收获${count}张食堂票，继续留在今日版面`;
+  if (count > 0) return `${name}拿到${count}张新票，正在冲上风味榜`;
+  if (dish.shopName) return `${dish.shopName}把${name}送上今日候选`;
+  if (dish.categoryName) return `${name}登上${dish.categoryName}栏目，等待第一张票`;
+  return `${name}成为今天的食堂头条候选`;
 }
 
 function RatingStars({ onRate }) {
@@ -124,15 +125,18 @@ function RatingStars({ onRate }) {
 }
 
 function DishRow({ dish, index, featured, onRate }) {
+  const imageUrl = dish.imageUrl || dishPlaceholder;
+  const headline = headlineForDish(dish);
   return (
     <article className={cx('dish-row', featured && 'featured-dish')}>
       <div className="rank-num">{String(index + 1).padStart(2, '0')}</div>
       <div className="dish-image">
-        {dish.imageUrl ? <img src={dish.imageUrl} alt={dish.name} /> : <FoodPoster tone={index % 2 ? 'green' : 'gold'} />}
+        <img src={imageUrl} alt={dish.name || '菜品占位图'} />
       </div>
       <div className="dish-main">
         <div className="dish-title-line">
-          <h2>{dish.name}</h2>
+          <h2>{headline}</h2>
+          <span>{dish.name}</span>
           <span>{dish.categoryName || '未分类'}</span>
         </div>
         <p>{dish.description || `${dish.canteenName || '食堂'} ${dish.floorName || ''} ${dish.shopName || ''}`}</p>
@@ -147,6 +151,7 @@ function DishRow({ dish, index, featured, onRate }) {
 }
 
 export function App() {
+  const [adminVisible] = useState(() => new URLSearchParams(window.location.search).get('admin') === '1');
   const [userToken, setUserToken] = useState(localStorage.getItem('dishUserToken') || '');
   const [adminToken, setAdminToken] = useState(localStorage.getItem('dishAdminToken') || '');
   const [schools, setSchools] = useState(fallbackSchools);
@@ -154,7 +159,7 @@ export function App() {
   const [rankings, setRankings] = useState(fallbackDishes);
   const [adminDishes, setAdminDishes] = useState(fallbackDishes);
   const [selectedSchool, setSelectedSchool] = useState(localStorage.getItem('dishSchoolId') || 'bistu');
-  const [activeTab, setActiveTab] = useState('rank');
+  const [activeTab, setActiveTab] = useState(() => (adminVisible ? 'admin' : 'rank'));
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -174,6 +179,8 @@ export function App() {
     [schools, selectedSchool]
   );
   const heroDish = rankings[0] || fallbackDishes[0];
+  const heroImageUrl = heroDish.imageUrl || dishPlaceholder;
+  const heroHeadline = headlineForDish(heroDish);
 
   async function bootstrap() {
     setLoading(true);
@@ -193,7 +200,7 @@ export function App() {
       await refreshData(firstSchoolId);
       setMessage('');
     } catch (error) {
-      setMessage('后端未连接，当前展示杂志风示例数据。');
+      setMessage('暂时没有连上实时数据，先展示示例榜单。');
     } finally {
       setLoading(false);
     }
@@ -215,7 +222,7 @@ export function App() {
       setCategories(fallbackCategories);
       setRankings(fallbackDishes);
       setAdminDishes(fallbackDishes);
-      setMessage('后端未连接，当前展示杂志风示例数据。');
+      setMessage('暂时没有连上实时数据，先展示示例榜单。');
     }
   }
 
@@ -258,7 +265,7 @@ export function App() {
     } catch {
       setRankings([optimisticDish, ...rankings]);
       setAdminDishes([optimisticDish, ...adminDishes]);
-      setMessage('后端未连接，已先在本地预览这条上传内容。');
+      setMessage('暂时没有连上实时数据，这条内容已先放进本地预览。');
     } finally {
       setForm({ name: '', categoryName: '', description: '', shopName: '', floorName: '', image: null });
       setActiveTab('rank');
@@ -277,7 +284,7 @@ export function App() {
         const avgScore = ((dish.avgScore || 0) * (ratingCount - 1) + score) / ratingCount;
         return { ...dish, ratingCount, avgScore };
       }));
-      setMessage('后端未连接，评分已先在本地预览。');
+      setMessage('暂时没有连上实时数据，这次评分已先在本地预览。');
     }
   }
 
@@ -293,7 +300,7 @@ export function App() {
     } catch {
       setAdminToken('local-admin-preview');
       setAdminPassword('');
-      setMessage('后端未连接，已进入管理预览模式。');
+      setMessage('暂时没有连上实时数据，已进入管理预览模式。');
     }
   }
 
@@ -340,9 +347,11 @@ export function App() {
           <button className={cx(activeTab === 'upload' && 'active')} onClick={() => setActiveTab('upload')}>
             <UploadCloud size={16} /> 上传菜品
           </button>
-          <button className={cx(activeTab === 'admin' && 'active')} onClick={() => setActiveTab('admin')}>
-            <Shield size={16} /> 管理后台
-          </button>
+          {adminVisible && (
+            <button className={cx(activeTab === 'admin' && 'active')} onClick={() => setActiveTab('admin')}>
+              <Shield size={16} /> 管理后台
+            </button>
+          )}
         </div>
         <div className="school-picker">
           <select value={selectedSchool} onChange={(event) => changeSchool(event.target.value)} aria-label="选择学校">
@@ -359,12 +368,12 @@ export function App() {
       {message && <div className="notice">{message}</div>}
 
       <section className="cover-stage">
-        <img className="cover-image" src={heroDish.imageUrl} alt={heroDish.name} />
+        <img className="cover-image" src={heroImageUrl} alt={heroDish.name || '菜品占位图'} />
         <div className="cover-shade" />
         <div className="cover-copy">
           <p className="kicker">CAMPUS FLAVOR GUIDE</p>
           <h1>食堂<br />风味榜</h1>
-          <p className="hero-deck">{currentSchool?.name || '北京信息科技大学'} · 今日精选 · {heroDish.ratingCount} 次评分更新</p>
+          <p className="hero-deck">{heroHeadline}</p>
         </div>
         <div className="cover-actions">
           <button className="primary-btn" onClick={() => setActiveTab('upload')}><UploadCloud size={17} /> 上传新菜</button>
@@ -444,7 +453,7 @@ export function App() {
         </form>
       )}
 
-      {activeTab === 'admin' && (
+      {adminVisible && activeTab === 'admin' && (
         <section className="admin-console">
           {!adminToken && (
             <form className="login-card" onSubmit={loginAdmin}>

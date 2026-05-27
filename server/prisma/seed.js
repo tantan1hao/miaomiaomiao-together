@@ -1,31 +1,10 @@
+import '../src/load-env.js';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import { BISTU_SCHOOL, UPSTREAM_CANTEENS, cloneFloors } from '../src/legacy-data.js';
 
 const prisma = new PrismaClient();
-
-const masterSchool = {
-  legacyId: 'bistu',
-  name: '北京信息科技大学',
-  abbr: 'BISTU',
-  admin: '西风漂流'
-};
-
-const canteens = [
-  {
-    name: '一食堂',
-    floors: [
-      { name: '一楼', shops: ['黄焖鸡米饭', '麻辣香锅', '兰州拉面'] },
-      { name: '二楼', shops: ['自助餐', '酸菜鱼', '煲仔饭'] }
-    ]
-  },
-  {
-    name: '二食堂',
-    floors: [
-      { name: '一楼', shops: ['沙县小吃', '桂林米粉', '川菜馆'] },
-      { name: '二楼', shops: ['麻辣烫', '烤鱼', '奶茶店'] }
-    ]
-  }
-];
+const bistuAdminPassword = process.env.BISTU_ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : '123456');
 
 const dishes = [
   { name: '黄焖鸡米饭', shopName: '黄焖鸡米饭', floorName: '一楼', category: '盖饭', description: '酱香浓郁，适合作为默认选择。' },
@@ -34,29 +13,39 @@ const dishes = [
   { name: '桂林米粉', shopName: '桂林米粉', floorName: '一楼', category: '粉面', description: '出餐快，适合赶课前后。' }
 ];
 
+function findCanteenNameForDish(dish) {
+  const match = UPSTREAM_CANTEENS.find((canteen) => (
+    canteen.floors || []
+  ).some((floor) => floor.name === dish.floorName && (floor.shops || []).includes(dish.shopName)));
+  return match?.name || UPSTREAM_CANTEENS[0]?.name;
+}
+
 async function main() {
+  if (!bistuAdminPassword) {
+    throw new Error('缺少 BISTU_ADMIN_PASSWORD。生产 seed 必须显式设置学校管理员密码。');
+  }
+
   const school = await prisma.school.upsert({
-    where: { legacyId: masterSchool.legacyId },
+    where: { legacyId: BISTU_SCHOOL.legacyId },
     create: {
-      ...masterSchool,
-      order: 1,
-      passwordHash: await bcrypt.hash('123456', 10)
+      ...BISTU_SCHOOL,
+      passwordHash: await bcrypt.hash(bistuAdminPassword, 10)
     },
-    update: masterSchool
+    update: BISTU_SCHOOL
   });
 
-  for (const [index, canteen] of canteens.entries()) {
+  for (const [index, canteen] of UPSTREAM_CANTEENS.entries()) {
     await prisma.canteen.upsert({
       where: { schoolId_name: { schoolId: school.id, name: canteen.name } },
       create: {
         schoolId: school.id,
         name: canteen.name,
         order: index + 1,
-        floors: canteen.floors
+        floors: cloneFloors(canteen.floors)
       },
       update: {
         order: index + 1,
-        floors: canteen.floors
+        floors: cloneFloors(canteen.floors)
       }
     });
   }
@@ -76,7 +65,9 @@ async function main() {
 
   for (const dish of dishes) {
     const category = await prisma.category.findFirst({ where: { schoolId: school.id, name: dish.category } });
-    const canteen = await prisma.canteen.findFirst({ where: { schoolId: school.id } });
+    const canteen = await prisma.canteen.findFirst({
+      where: { schoolId: school.id, name: findCanteenNameForDish(dish) }
+    });
     const created = await prisma.dish.findFirst({ where: { schoolId: school.id, name: dish.name } })
       || await prisma.dish.create({ data: {
         schoolId: school.id,

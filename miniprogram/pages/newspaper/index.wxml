@@ -24,7 +24,15 @@
               <text>{{editionDate}}</text>
               <text>{{networkNote}}</text>
             </view>
-            <view class="masthead-title">明天吃什么日报</view>
+            <view class="poster-masthead">
+              <view class="masthead-title" bindtap="onMastheadTap">明天吃什么日报</view>
+              <view class="masthead-sketch" aria-hidden="true">
+                <view class="sketch-head"></view>
+                <view class="sketch-body"></view>
+                <view class="sketch-pan"></view>
+                <view class="sketch-steam"></view>
+              </view>
+            </view>
             <view class="masthead-subtitle">MINGTIAN EAT WHAT DAILY · WEIXIN MINI PROGRAM</view>
             <view class="double-rule"></view>
           </view>
@@ -40,85 +48,117 @@
                     <text>{{leadDish.ratingText}}</text>
                   </view>
                   <view class="news-photo lead-photo">
-                    <image wx:if="{{leadDish.imageUrl}}" src="{{leadDish.imageUrl}}" mode="aspectFill" />
-                    <view wx:else class="halftone-photo">
-                      <text class="photo-score">{{leadDish.scoreText}}</text>
-                      <text class="photo-name">{{leadDish.name}}</text>
-                    </view>
+                    <image src="{{leadDish.imageUrl}}" mode="aspectFill" />
                     <view class="photo-caption">
                       <text>{{leadDish.name}}</text>
                       <text>{{leadDish.scoreText}} 分</text>
                     </view>
                   </view>
                   <text class="lead-deck">{{leadDish.description}}</text>
-                </view>
-
-                <view class="brief-columns">
-                  <view class="brief-item">
-                    <text class="brief-title">{{featureDish.name}}</text>
-                    <text class="brief-text">{{featureDish.description}}</text>
-                  </view>
-                  <view class="brief-item">
-                    <text class="brief-title">{{thirdDish.name}}</text>
-                    <text class="brief-text">{{thirdDish.description}}</text>
+                  <view class="lead-briefs">
+                    <view class="lead-brief">
+                      <view class="lead-brief-media">
+                        <image src="{{featureDish.imageUrl}}" mode="aspectFill" />
+                        <text class="lead-brief-label">二条</text>
+                      </view>
+                      <text class="lead-brief-title">{{featureDish.headline}}</text>
+                      <view class="lead-brief-meta">
+                        <text>{{featureDish.name}}</text>
+                        <text>{{featureDish.scoreText}} 分</text>
+                      </view>
+                      <text class="lead-brief-text">{{featureDish.description}}</text>
+                    </view>
+                    <view class="lead-brief">
+                      <view class="lead-brief-media">
+                        <image src="{{thirdDish.imageUrl}}" mode="aspectFill" />
+                        <text class="lead-brief-label">三条</text>
+                      </view>
+                      <text class="lead-brief-title">{{thirdDish.headline}}</text>
+                      <view class="lead-brief-meta">
+                        <text>{{thirdDish.name}}</text>
+                        <text>{{thirdDish.scoreText}} 分</text>
+                      </view>
+                      <text class="lead-brief-text">{{thirdDish.description}}</text>
+                    </view>
                   </view>
                 </view>
               </view>
 
               <view class="front-sidebar">
-                <view class="side-module ranking-teaser" bindtap="goEdition" data-target="1">
+                <view class="side-module ranking-teaser">
                   <text class="side-label">榜单</text>
                   <text class="side-title">今日风味榜</text>
+                  <text class="side-action">榜单摘要</text>
                   <view class="mini-rank">
                     <text>01</text>
-                    <text>{{leadDish.name}}</text>
+                    <view class="mini-rank-copy">
+                      <text class="mini-rank-name">{{leadDish.name}}</text>
+                      <text class="mini-rank-shop">{{leadDish.shopText}}</text>
+                    </view>
                     <text>{{leadDish.scoreText}}</text>
                   </view>
                   <view class="mini-rank">
                     <text>02</text>
-                    <text>{{featureDish.name}}</text>
+                    <view class="mini-rank-copy">
+                      <text class="mini-rank-name">{{featureDish.name}}</text>
+                      <text class="mini-rank-shop">{{featureDish.shopText}}</text>
+                    </view>
                     <text>{{featureDish.scoreText}}</text>
                   </view>
                   <view class="mini-rank">
                     <text>03</text>
-                    <text>{{thirdDish.name}}</text>
+                    <view class="mini-rank-copy">
+                      <text class="mini-rank-name">{{thirdDish.name}}</text>
+                      <text class="mini-rank-shop">{{thirdDish.shopText}}</text>
+                    </view>
                     <text>{{thirdDish.scoreText}}</text>
                   </view>
                 </view>
 
-                <view class="side-module submit-teaser" bindtap="openSubmitSheet">
-                  <text class="side-label">征稿</text>
-                  <text class="side-title">拍照投稿</text>
-                  <text class="side-text">菜名、窗口、楼层和一句口味描述，投进明天版面。</text>
-                </view>
-
-                <view class="side-module notice-teaser" bindtap="goEdition" data-target="3">
-                  <text class="side-label">公告</text>
-                  <text class="side-title">食堂短讯</text>
-                  <text class="side-text">{{announcementText}}</text>
+                <view class="side-module random-card">
+                  <view class="random-head">
+                    <text class="random-label">随机推荐</text>
+                    <text class="random-refresh" bindtap="rollRandomPick">换一个 ›</text>
+                  </view>
+                  <view class="random-body">
+                    <text class="random-shop">{{randomPick.shop}}</text>
+                    <text class="random-place">{{randomPick.place}}</text>
+                  </view>
                 </view>
               </view>
             </view>
 
             <view class="front-wire">
-              <view class="wire-item" bindtap="goEdition" data-target="2">
+              <view class="wire-item wire-major" bindtap="goEdition" data-target="2">
                 <text>投稿版</text>
                 <text>新菜征集</text>
               </view>
-              <view class="wire-item" bindtap="refreshData">
-                <text>刷新</text>
-                <text>重排版面</text>
+              <view class="wire-item wire-major wire-vote" bindtap="goEdition" data-target="1">
+                <text>投票</text>
+                <text>给上榜菜打分</text>
               </view>
-              <view class="wire-item" bindtap="goEdition" data-target="3">
-                <text>公告栏</text>
-                <text>分类索引</text>
+              <view class="wire-side">
+                <view class="wire-item wire-small" bindtap="goEdition" data-target="3">
+                  <text>公告栏</text>
+                  <text>分类索引</text>
+                </view>
+                <view class="wire-item wire-small" bindtap="refreshData">
+                  <text>刷新</text>
+                  <text>重排版面</text>
+                </view>
               </view>
+            </view>
+
+            <view class="front-sponsor">
+              <text>校园食堂小报</text>
+              <text>WHITE PAPER · BLACK INK · RED MARKS</text>
             </view>
           </view>
 
           <view class="paper-footer">
             <text>第 01 版</text>
             <text>滑动翻版 · 点击栏目进入</text>
+            <text bindtap="rollRandomPick">随机推荐 ›</text>
           </view>
         </view>
       </view>
@@ -141,24 +181,28 @@
           <view class="ranking-table newspaper-table">
             <view class="ranking-row top-row">
               <text class="rank-col">名次</text>
-              <text class="dish-col">菜品与窗口</text>
-              <text class="score-col">评分</text>
+              <text class="dish-col">菜品头条与投票</text>
+              <text class="score-col">得分</text>
             </view>
             <view class="ranking-row" wx:for="{{rankingRows}}" wx:key="id">
               <text class="rank-col rank-number">{{index + 1}}</text>
               <view class="dish-col dish-info">
+                <text class="dish-headline">{{item.headline}}</text>
                 <text class="dish-name">{{item.name}}</text>
                 <text class="dish-place">{{item.placeText}}</text>
-                <view class="rating-strip" wx:if="{{item.canRate}}">
-                  <text
-                    wx:for="{{ratingScoreOptions}}"
-                    wx:for-item="score"
-                    wx:key="*this"
-                    class="rating-button"
-                    data-dish-id="{{item.id}}"
-                    data-score="{{score}}"
-                    bindtap="onRateTap"
-                  >{{score}}</text>
+                <view class="vote-strip" wx:if="{{item.canRate}}">
+                  <text class="vote-label">投票</text>
+                  <view class="rating-strip">
+                    <text
+                      wx:for="{{ratingScoreOptions}}"
+                      wx:for-item="score"
+                      wx:key="*this"
+                      class="rating-button"
+                      data-dish-id="{{item.id}}"
+                      data-score="{{score}}"
+                      bindtap="onRateTap"
+                    >{{score}}</text>
+                  </view>
                 </view>
               </view>
               <view class="score-col score-info">

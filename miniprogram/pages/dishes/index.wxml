@@ -21,9 +21,9 @@
   <view wx:if="{{activePanel === 'rank'}}" class="rank-section">
     <view class="dish-row featured" wx:if="{{rankings.length}}" data-id="{{rankings[0].id}}">
       <view class="rank-number">01</view>
-      <image wx:if="{{rankings[0].imageUrl}}" class="dish-image hero-image" src="{{rankings[0].imageUrl}}" mode="aspectFill" />
-      <view wx:else class="dish-image poster"></view>
+      <image class="dish-image hero-image" src="{{rankings[0].imageUrl}}" mode="aspectFill" />
       <view class="dish-copy">
+        <text class="dish-headline">{{rankings[0].headlineText}}</text>
         <text class="dish-name">{{rankings[0].name}}</text>
         <text class="dish-place">{{rankings[0].placeText}}</text>
         <text class="dish-desc">{{rankings[0].description || '校园食堂今日上榜菜品'}}</text>
@@ -33,6 +33,7 @@
         <text class="rating-count">{{rankings[0].ratingText}}</text>
       </view>
       <view class="stars">
+        <text class="vote-label">投票</text>
         <view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="star" data-id="{{rankings[0].id}}" data-score="{{item}}" bindtap="rateDish">{{item}}</view>
       </view>
     </view>
@@ -40,9 +41,9 @@
     <block wx:for="{{rankings}}" wx:for-item="dish" wx:for-index="dishIndex" wx:key="id">
       <view class="dish-row" wx:if="{{dishIndex > 0}}">
         <view class="rank-number">{{dish.rank < 10 ? '0' + dish.rank : dish.rank}}</view>
-        <image wx:if="{{dish.imageUrl}}" class="dish-image" src="{{dish.imageUrl}}" mode="aspectFill" />
-        <view wx:else class="dish-image poster"></view>
+        <image class="dish-image" src="{{dish.imageUrl}}" mode="aspectFill" />
         <view class="dish-copy">
+          <text class="dish-headline">{{dish.headlineText}}</text>
           <text class="dish-name">{{dish.name}}</text>
           <text class="dish-place">{{dish.placeText}}</text>
           <text class="dish-desc">{{dish.description || '等待更多同学补充风味记录'}}</text>
@@ -52,6 +53,7 @@
           <text class="rating-count">{{dish.ratingText}}</text>
         </view>
         <view class="stars">
+          <text class="vote-label">投票</text>
           <view wx:for="{{[1,2,3,4,5]}}" wx:for-item="score" wx:key="*this" class="star" data-id="{{dish.id}}" data-score="{{score}}" bindtap="rateDish">{{score}}</view>
         </view>
       </view>

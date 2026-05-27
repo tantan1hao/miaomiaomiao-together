@@ -14,26 +14,36 @@ import { DishStatus } from '@prisma/client';
 import { prisma } from './db.js';
 import { config } from './config.js';
 import { sortRankedDishes } from './ranking.js';
+import { BISTU_SCHOOL, UPSTREAM_CANTEENS, cloneFloors } from './legacy-data.js';
 
-const BISTU_LEGACY_ID = 'bistu';
-const DEFAULT_CANTEENS = [
-  {
-    name: '一食堂',
-    floors: [
-      { name: '一楼', shops: ['黄焖鸡米饭', '麻辣香锅', '兰州拉面', '重庆小面', '煎饼果子', '肉夹馍'] },
-      { name: '二楼', shops: ['自助餐', '小炒肉', '酸菜鱼', '煲仔饭', '过桥米线', '铁板烧'] },
-      { name: '三楼', shops: ['火锅', '烤肉', '韩式料理', '日式料理', '西餐厅', '甜品站'] }
-    ]
-  },
-  {
-    name: '二食堂',
-    floors: [
-      { name: '一楼', shops: ['沙县小吃', '桂林米粉', '湘菜馆', '川菜馆', '粤菜馆', '饺子馆'] },
-      { name: '二楼', shops: ['汉堡王', '肯德基', '必胜客', '赛百味', '奶茶店', '咖啡厅'] },
-      { name: '三楼', shops: ['麻辣烫', '冒菜', '干锅', '烤鱼', '烧烤', '小龙虾'] }
-    ]
-  }
-];
+const BISTU_LEGACY_ID = BISTU_SCHOOL.legacyId;
+const DEV_BISTU_ADMIN_PASSWORD = '123456';
+const LEGACY_ADMIN_ACTIONS = new Set([
+  'addSchool',
+  'updateSchool',
+  'deleteSchool',
+  'updateSchoolOrder',
+  'initCanteenData',
+  'addCanteen',
+  'deleteCanteen',
+  'addShop',
+  'deleteShop',
+  'addFloor',
+  'deleteFloor',
+  'getAllSchoolStats',
+  'getAllShopStats',
+  'setAnnouncement',
+  'updateShopInfo',
+  'getSuggestions'
+]);
+const LEGACY_MASTER_ACTIONS = new Set([
+  'addSchool',
+  'updateSchool',
+  'deleteSchool',
+  'updateSchoolOrder',
+  'getAllSchoolStats',
+  'getSuggestions'
+]);
 
 function httpError(statusCode, message) {
   const err = new Error(message);
@@ -83,6 +93,11 @@ async function optionalUser(request) {
   }
 }
 
+async function optionalAdmin(request) {
+  if (!bearerToken(request)) return null;
+  return requireAdmin(request);
+}
+
 async function requireAdmin(request) {
   const token = bearerToken(request);
   if (!token) throw httpError(401, '请先登录管理后台');
@@ -123,6 +138,19 @@ function toCanteen(canteen) {
   };
 }
 
+function dishHeadline(dish) {
+  const name = String(dish.name || '这道菜').trim();
+  const shop = String(dish.shopName || dish.canteen?.name || '').trim();
+  const category = String(dish.category?.name || '').trim();
+  const ratingCount = Number(dish.ratingCount || 0);
+
+  if (ratingCount >= 20) return `${name}收获${ratingCount}张食堂票，继续留在今日版面`;
+  if (ratingCount > 0) return `${name}拿到${ratingCount}张新票，正在冲上风味榜`;
+  if (shop) return `${shop}把${name}送上今日候选`;
+  if (category) return `${name}登上${category}栏目，等待第一张票`;
+  return `${name}成为今天的食堂头条候选`;
+}
+
 function toDish(dish) {
   return {
     id: dish.id,
@@ -135,6 +163,7 @@ function toDish(dish) {
     floorName: dish.floorName || '',
     shopName: dish.shopName || '',
     name: dish.name,
+    headline: dishHeadline(dish),
     description: dish.description || '',
     imageUrl: dish.imageUrl || '',
     status: dish.status,
@@ -155,6 +184,11 @@ function normalizeFloors(floors) {
   }));
 }
 
+function assertAdminCanAccessSchool(admin, schoolId) {
+  if (admin.role === 'MASTER') return;
+  if (!schoolId || admin.schoolId !== schoolId) throw httpError(403, '无权操作该学校');
+}
+
 async function resolveSchoolId(externalId) {
   if (!externalId) return null;
   const school = await prisma.school.findFirst({
@@ -170,20 +204,52 @@ async function getDefaultSchoolId() {
   return school?.id || null;
 }
 
+async function resolveLegacyActionSchoolId(event) {
+  const externalSchoolId = event?.schoolId || event?.data?.schoolId;
+  const schoolId = await resolveSchoolId(externalSchoolId);
+  if (schoolId) return schoolId;
+
+  const canteenId = event?.data?.canteenId;
+  if (canteenId) {
+    const canteen = await prisma.canteen.findUnique({
+      where: { id: canteenId },
+      select: { schoolId: true }
+    });
+    if (canteen?.schoolId) return canteen.schoolId;
+  }
+
+  return getDefaultSchoolId();
+}
+
+async function requireLegacyActionAdmin(request, event) {
+  const action = event?.action;
+  if (!LEGACY_ADMIN_ACTIONS.has(action)) return null;
+
+  const admin = await requireAdmin(request);
+  if (LEGACY_MASTER_ACTIONS.has(action) && admin.role !== 'MASTER') {
+    throw httpError(403, '需要总后台权限');
+  }
+
+  if (!LEGACY_MASTER_ACTIONS.has(action)) {
+    const schoolId = await resolveLegacyActionSchoolId(event);
+    assertAdminCanAccessSchool(admin, schoolId);
+  }
+
+  return admin;
+}
+
 async function ensureBistuSchool() {
   const existing = await prisma.school.findFirst({
     where: { OR: [{ legacyId: BISTU_LEGACY_ID }, { abbr: 'BISTU' }] }
   });
   if (existing) return existing;
 
+  const password = config.bistuAdminPassword || DEV_BISTU_ADMIN_PASSWORD;
   return prisma.school.create({
     data: {
-      legacyId: BISTU_LEGACY_ID,
-      name: '北京信息科技大学',
-      abbr: 'BISTU',
-      admin: '西风漂流',
-      passwordHash: await bcrypt.hash('123456', 10),
-      order: 1
+      ...BISTU_SCHOOL,
+      passwordHash: await bcrypt.hash(password, 10),
+      order: BISTU_SCHOOL.order
     }
   });
 }
@@ -193,11 +259,11 @@ async function ensureDefaultCanteens(schoolId) {
   if (count > 0) return;
 
   await prisma.canteen.createMany({
-    data: DEFAULT_CANTEENS.map((canteen, index) => ({
+    data: UPSTREAM_CANTEENS.map((canteen, index) => ({
       schoolId,
       name: canteen.name,
       order: index + 1,
-      floors: canteen.floors
+      floors: cloneFloors(canteen.floors)
     })),
     skipDuplicates: true
   });
@@ -207,6 +273,7 @@ async function resolveCategory(categoryId, categoryName, schoolId) {
   if (categoryId) {
     const category = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!category) throw httpError(404, '分类不存在');
+    if (category.schoolId && category.schoolId !== schoolId) throw httpError(400, '分类不属于当前学校');
     return category.id;
   }
   if (!categoryName || !String(categoryName).trim()) return null;
@@ -280,6 +347,7 @@ async function exchangeWechatCode(code) {
     throw httpError(401, data.errmsg || '微信登录失败');
   }
 
+  if (config.isProduction) throw httpError(500, '微信登录未配置');
   return `dev_${code || nanoid(16)}`;
 }
 
@@ -345,11 +413,20 @@ async function registerApiRoutes(app, prefix) {
 
     api.post('/auth/wechat', async (request) => {
       const { code, nickname, avatarUrl } = request.body || {};
+      const cleanNickname = String(nickname || '').trim();
+      const cleanAvatarUrl = String(avatarUrl || '').trim();
+      const updateData = {};
+      if (cleanNickname) updateData.nickname = cleanNickname;
+      if (cleanAvatarUrl) updateData.avatarUrl = cleanAvatarUrl;
       const openid = await exchangeWechatCode(code);
       const user = await prisma.user.upsert({
         where: { openid },
-        create: { openid, nickname, avatarUrl },
-        update: { nickname, avatarUrl }
+        create: {
+          openid,
+          nickname: cleanNickname || '微信读者',
+          avatarUrl: cleanAvatarUrl
+        },
+        update: updateData
       });
       return { success: true, data: { token: signUserToken(user), user } };
     });
@@ -399,9 +476,18 @@ async function registerApiRoutes(app, prefix) {
     });
 
     api.get('/dishes', async (request) => {
-      const schoolId = await resolveSchoolId(request.query.schoolId);
+      let schoolId = await resolveSchoolId(request.query.schoolId);
+      let includeOffline = false;
+      if (request.query.includeOffline === '1') {
+        const admin = await optionalAdmin(request);
+        includeOffline = Boolean(admin);
+        if (admin?.role !== 'MASTER') {
+          if (schoolId && schoolId !== admin.schoolId) throw httpError(403, '无权查看该学校菜品');
+          schoolId = admin?.schoolId || schoolId;
+        }
+      }
       const where = {
-        status: request.query.includeOffline === '1' ? undefined : DishStatus.ACTIVE,
+        ...(includeOffline ? {} : { status: DishStatus.ACTIVE }),
         ...(schoolId ? { schoolId } : {}),
         ...(request.query.categoryId ? { categoryId: request.query.categoryId } : {})
       };
@@ -433,15 +519,20 @@ async function registerApiRoutes(app, prefix) {
           shopName: body.shopName || null,
           floorName: body.floorName || null,
           description: body.description || '',
-          imageUrl: body.imageUrl || ''
+          imageUrl: body.imageUrl || '',
+          status: DishStatus.PENDING
         },
         include: { category: true, school: true, canteen: true }
       });
       return { success: true, data: toDish(dish) };
     });
 
-    api.patch('/dishes/:id', async (request) => {
-      await requireAdmin(request);
+    const updateDishHandler = async (request) => {
+      const admin = await requireAdmin(request);
+      const current = await prisma.dish.findUnique({ where: { id: request.params.id } });
+      if (!current) throw httpError(404, '菜品不存在');
+      assertAdminCanAccessSchool(admin, current.schoolId);
+
       const body = request.body || {};
       const data = {};
       for (const key of ['name', 'description', 'shopName', 'floorName', 'imageUrl']) {
@@ -452,8 +543,7 @@ async function registerApiRoutes(app, prefix) {
         data.status = body.status;
       }
       if (body.categoryId || body.categoryName) {
-        const current = await prisma.dish.findUnique({ where: { id: request.params.id } });
-        data.categoryId = await resolveCategory(body.categoryId, body.categoryName, current?.schoolId || null);
+        data.categoryId = await resolveCategory(body.categoryId, body.categoryName, current.schoolId);
       }
       const dish = await prisma.dish.update({
         where: { id: request.params.id },
@@ -461,7 +551,10 @@ async function registerApiRoutes(app, prefix) {
         include: { category: true, school: true, canteen: true }
       });
       return { success: true, data: toDish(dish) };
-    });
+    };
+
+    api.patch('/dishes/:id', updateDishHandler);
+    api.put('/dishes/:id', updateDishHandler);
 
     api.post('/ratings', async (request) => {
       const user = await requireUser(request);
@@ -519,7 +612,9 @@ async function registerApiRoutes(app, prefix) {
     });
 
     api.post('/miniprogram/call', async (request) => {
-      return runLegacyAction(request.body || {});
+      const event = request.body || {};
+      await requireLegacyActionAdmin(request, event);
+      return runLegacyAction(event);
     });
   }, { prefix });
 }
@@ -644,11 +739,12 @@ async function updateSchoolOrderAction(data) {
 async function verifyPasswordAction(data) {
   const login = await verifyAdminPassword(data.password);
   if (!login) return { success: false, message: '密码错误' };
+  const session = await createAdminSession(login);
   if (login.role === 'MASTER') {
-    return { success: true, data: { role: 'master', schoolId: BISTU_LEGACY_ID, schoolName: '北京信息科技大学' } };
+    return { success: true, data: { role: 'master', schoolId: BISTU_LEGACY_ID, schoolName: '北京信息科技大学', token: session.token } };
   }
   const school = await prisma.school.findUnique({ where: { id: login.schoolId } });
-  return { success: true, data: { role: 'school', schoolId: school.legacyId || school.id, schoolName: school.name } };
+  return { success: true, data: { role: 'school', schoolId: school.legacyId || school.id, schoolName: school.name, token: session.token } };
 }
 
 async function getCanteenDataAction(externalSchoolId) {
@@ -903,7 +999,7 @@ async function getSuggestionsAction() {
 
 export async function buildApp(options = {}) {
   const app = Fastify({ logger: options.logger ?? true });
-  await app.register(cors, { origin: true });
+  await app.register(cors, { origin: config.corsOrigins });
   await app.register(multipart, { limits: { fileSize: config.maxImageBytes } });
 
   await fs.mkdir(config.uploadDir, { recursive: true }).catch(() => {});

@@ -1,135 +1,168 @@
 const api = require('../../utils/api')
 
+const ADMIN_TOKEN_KEY = 'dishAdminToken'
+const DISH_PLACEHOLDER = '/images/dish-placeholder.svg'
+const STATUS_TEXT = {
+  ACTIVE: '上架',
+  OFFLINE: '下架',
+  PENDING: '待审核',
+  REJECTED: '已拒绝'
+}
+
+function buildDishHeadline(dish) {
+  const name = dish.name || '这道菜'
+  const count = Number(dish.ratingCount || 0)
+  if (dish.headline) return dish.headline
+  if (count >= 20) return `${name}收获${count}张食堂票，继续留在今日版面`
+  if (count > 0) return `${name}拿到${count}张新票，正在冲上风味榜`
+  if (dish.shopName) return `${dish.shopName}把${name}送上今日候选`
+  if (dish.categoryName) return `${name}登上${dish.categoryName}栏目，等待第一张票`
+  return `${name}成为今天的食堂头条候选`
+}
+
+function normalizeDish(dish) {
+  return {
+    ...dish,
+    imageUrl: dish.imageUrl || DISH_PLACEHOLDER,
+    headlineText: buildDishHeadline(dish),
+    placeText: [dish.canteenName, dish.floorName, dish.shopName].filter(Boolean).join(' · ') || '校园食堂',
+    scoreText: Number(dish.avgScore || 0).toFixed(1),
+    ratingText: `${dish.ratingCount || 0} 人评分`,
+    statusText: STATUS_TEXT[dish.status] || '上架',
+    statusClass: String(dish.status || 'ACTIVE').toLowerCase()
+  }
+}
+
+function countByStatus(rows, status) {
+  return rows.filter((dish) => (dish.status || 'ACTIVE') === status).length
+}
+
 Page({
   data: {
-    schoolId: '',
-    schoolName: '',
-    schoolAdmin: '',
-    canteenList: [],
-    loading: true,
-    announcement: '',
-    showCanteenModal: false,
-    newCanteenName: '',
-    showFloorModal: false,
-    newFloorName: '',
-    currentCanteenId: '',
-    schoolStats: {
+    schoolId: 'bistu',
+    schoolName: '北京信息科技大学',
+    adminToken: '',
+    password: '',
+    loading: false,
+    saving: false,
+    activeStatus: 'all',
+    statusTabs: [
+      { key: 'all', label: '全部' },
+      { key: 'ACTIVE', label: '上架' },
+      { key: 'OFFLINE', label: '下架' },
+      { key: 'PENDING', label: '待审核' }
+    ],
+    stats: {
       total: 0,
-      today: 0
+      active: 0,
+      offline: 0,
+      pending: 0
     },
-    showShopEditModal: false,
-    currentEditShop: '',
-    currentEditShopKey: '',
-    shopEditData: {
-      signature: '',
+    announcement: '',
+    categoryName: '',
+    categories: [],
+    dishes: [],
+    visibleDishes: [],
+    showEditSheet: false,
+    editingDishId: '',
+    editForm: {
+      name: '',
+      categoryName: '',
+      shopName: '',
+      floorName: '',
       description: '',
-      openTime: '',
-      closeTime: '',
-      minPrice: '',
-      maxPrice: '',
-      tagsStr: ''
+      imageUrl: ''
     }
   },
 
   onLoad(options) {
-    const schoolId = options.schoolId || 'bistu'
-    const schoolName = decodeURIComponent(options.schoolName || '北京信息科技大学')
+    const selectedSchool = wx.getStorageSync('selectedSchool') || {}
+    const schoolId = options.schoolId || selectedSchool._id || 'bistu'
+    const schoolName = options.schoolName
+      ? decodeURIComponent(options.schoolName)
+      : selectedSchool.name || '北京信息科技大学'
+    const adminToken = wx.getStorageSync(ADMIN_TOKEN_KEY) || ''
 
-    this.setData({ schoolId, schoolName })
-    this.loadSchoolInfo()
-    this.loadCanteenData()
-    this.loadAnnouncement()
-    this.loadSchoolStats()
+    this.setData({ schoolId, schoolName, adminToken })
+    if (adminToken) this.loadAdminData()
   },
 
-  async loadSchoolInfo() {
-    if (this.data.schoolId === 'bistu') {
-      this.setData({ schoolAdmin: '西风漂流' })
+  onPullDownRefresh() {
+    this.loadAdminData().finally(() => wx.stopPullDownRefresh())
+  },
+
+  onPasswordInput(e) {
+    this.setData({ password: e.detail.value })
+  },
+
+  async loginAdmin() {
+    const password = this.data.password.trim()
+    if (!password) {
+      wx.showToast({ title: '请输入管理密码', icon: 'none' })
       return
     }
 
+    this.setData({ loading: true })
+    wx.showLoading({ title: '登录中' })
     try {
-      const res = await api.callFunction({ action: 'getSchools' })
+      const session = await api.adminLogin(password)
+      wx.setStorageSync(ADMIN_TOKEN_KEY, session.token)
+      this.setData({ adminToken: session.token, password: '' })
+      wx.showToast({ title: '已登录', icon: 'success' })
+      await this.loadAdminData()
+    } catch (err) {
+      wx.showToast({ title: err.message || '登录失败', icon: 'none' })
+    } finally {
+      wx.hideLoading()
+      this.setData({ loading: false })
+    }
+  },
 
-      if (res.result && res.result.success && res.result.data) {
-        const school = res.result.data.find(s => s._id === this.data.schoolId)
-        if (school && school.admin) {
-          this.setData({ schoolAdmin: school.admin })
+  logoutAdmin() {
+    wx.removeStorageSync(ADMIN_TOKEN_KEY)
+    this.setData({ adminToken: '', dishes: [], visibleDishes: [] })
+  },
+
+  async loadAdminData() {
+    if (!this.data.adminToken) return
+    this.setData({ loading: true })
+    try {
+      const [announcement, categories, dishes] = await Promise.all([
+        api.announcement(this.data.schoolId),
+        api.categories(this.data.schoolId),
+        api.dishes(this.data.schoolId, true)
+      ])
+      const normalizedDishes = (dishes || []).map(normalizeDish)
+      this.setData({
+        announcement: announcement || '',
+        categories: categories || [],
+        dishes: normalizedDishes,
+        stats: {
+          total: normalizedDishes.length,
+          active: countByStatus(normalizedDishes, 'ACTIVE'),
+          offline: countByStatus(normalizedDishes, 'OFFLINE'),
+          pending: countByStatus(normalizedDishes, 'PENDING')
         }
-      }
-    } catch (e) {
-      console.log('加载学校信息失败', e)
+      })
+      this.applyStatusFilter()
+    } catch (err) {
+      wx.showToast({ title: err.message || '加载失败', icon: 'none' })
+    } finally {
+      this.setData({ loading: false })
     }
   },
 
-  async loadCanteenData() {
-    wx.showLoading({ title: '加载中...' })
-
-    try {
-      const res = await api.callFunction({
-          action: 'getCanteenData',
-          schoolId: this.data.schoolId
-        })
-
-      if (res.result && res.result.success && res.result.data && res.result.data.length > 0) {
-        const canteenList = res.result.data.map(canteen => {
-          let totalShops = 0
-          const floors = (canteen.floors || []).map(floor => {
-            totalShops += (floor.shops || []).length
-            return {
-              name: floor.name,
-              shops: floor.shops || [],
-              expanded: false,
-              newShopName: ''
-            }
-          })
-          return {
-            _id: canteen._id,
-            name: canteen.name,
-            order: canteen.order,
-            floors: floors,
-            totalShops: totalShops,
-            expanded: false
-          }
-        })
-        this.setData({ canteenList, loading: false })
-      } else {
-        await this.initDefaultData()
-      }
-    } catch (e) {
-      console.log('加载数据失败', e)
-      await this.initDefaultData()
-    }
-
-    wx.hideLoading()
+  applyStatusFilter() {
+    const { activeStatus, dishes } = this.data
+    const visibleDishes = activeStatus === 'all'
+      ? dishes
+      : dishes.filter((dish) => (dish.status || 'ACTIVE') === activeStatus)
+    this.setData({ visibleDishes })
   },
 
-  async loadAnnouncement() {
-    try {
-      const res = await api.callFunction({
-          action: 'getAnnouncement',
-          schoolId: this.data.schoolId
-        })
-      if (res.result && res.result.success) {
-        this.setData({ announcement: res.result.data })
-      }
-    } catch (e) {
-      console.log('加载公告失败', e)
-    }
-  },
-
-  async loadSchoolStats() {
-    try {
-      const res = await api.callFunction({
-          action: 'getSchoolStats',
-          schoolId: this.data.schoolId
-        })
-      if (res.result && res.result.success) {
-        this.setData({ schoolStats: res.result.data })
-      }
-    } catch (e) {
-      console.log('加载学校统计失败', e)
-    }
+  switchStatus(e) {
+    this.setData({ activeStatus: e.currentTarget.dataset.status })
+    this.applyStatusFilter()
   },
 
   onAnnouncementInput(e) {
@@ -137,496 +170,108 @@ Page({
   },
 
   async saveAnnouncement() {
+    this.setData({ saving: true })
     try {
-      const res = await api.callFunction({
-          action: 'setAnnouncement',
-          schoolId: this.data.schoolId,
-          data: { content: this.data.announcement }
-        })
-      if (res.result && res.result.success) {
-        wx.showToast({ title: '保存成功', icon: 'success' })
-      } else {
-        wx.showToast({ title: '保存失败', icon: 'error' })
-      }
-    } catch (e) {
-      console.log('保存公告失败', e)
-      wx.showToast({ title: '保存失败', icon: 'error' })
-    }
-  },
-
-  async initDefaultData() {
-    try {
-      const res = await api.callFunction({
-          action: 'initCanteenData',
-          schoolId: this.data.schoolId
-        })
-
-      if (res.result && res.result.success) {
-        await this.loadCanteenData()
-      }
-    } catch (e) {
-      console.log('初始化数据失败', e)
-      wx.showToast({ title: '初始化失败', icon: 'error' })
-    }
-  },
-
-  toggleCanteen(e) {
-    const canteenId = e.currentTarget.dataset.canteen
-    const canteenList = this.data.canteenList.map(c => {
-      if (c._id === canteenId) {
-        return { ...c, expanded: !c.expanded }
-      }
-      return c
-    })
-    this.setData({ canteenList })
-  },
-
-  toggleFloor(e) {
-    const { canteen, floor } = e.currentTarget.dataset
-    const canteenList = this.data.canteenList.map(c => {
-      if (c._id === canteen) {
-        return {
-          ...c,
-          floors: c.floors.map(f => {
-            if (f.name === floor) {
-              return { ...f, expanded: !f.expanded }
-            }
-            return f
-          })
-        }
-      }
-      return c
-    })
-    this.setData({ canteenList })
-  },
-
-  onShopInput(e) {
-    const { canteen, floor } = e.currentTarget.dataset
-    const value = e.detail.value
-    const canteenList = this.data.canteenList.map(c => {
-      if (c._id === canteen) {
-        return {
-          ...c,
-          floors: c.floors.map(f => {
-            if (f.name === floor) {
-              return { ...f, newShopName: value }
-            }
-            return f
-          })
-        }
-      }
-      return c
-    })
-    this.setData({ canteenList })
-  },
-
-  async addShop(e) {
-    const { canteen, floor } = e.currentTarget.dataset
-    const canteenItem = this.data.canteenList.find(c => c._id === canteen._id)
-    if (!canteenItem) return
-
-    const floorItem = canteenItem.floors.find(f => f.name === floor)
-    if (!floorItem) return
-
-    const shopName = floorItem.newShopName
-    if (!shopName || !shopName.trim()) {
-      wx.showToast({ title: '请输入店铺名称', icon: 'none' })
-      return
-    }
-
-    if (floorItem.shops.includes(shopName.trim())) {
-      wx.showToast({ title: '该店铺已存在', icon: 'none' })
-      return
-    }
-
-    try {
-      const res = await api.callFunction({
-          action: 'addShop',
-          schoolId: this.data.schoolId,
-          data: {
-            canteenId: canteen._id,
-            floorName: floor,
-            shopName: shopName.trim()
-          }
-        })
-
-      if (res.result && res.result.success) {
-        const newShops = [...floorItem.shops, shopName.trim()]
-        const canteenList = this.data.canteenList.map(c => {
-          if (c._id === canteen._id) {
-            return {
-              ...c,
-              totalShops: c.totalShops + 1,
-              floors: c.floors.map(f => {
-                if (f.name === floor) {
-                  return { ...f, shops: newShops, newShopName: '' }
-                }
-                return f
-              })
-            }
-          }
-          return c
-        })
-        this.setData({ canteenList })
-        wx.showToast({ title: '添加成功', icon: 'success' })
-      } else {
-        wx.showToast({ title: '添加失败', icon: 'error' })
-      }
+      await api.setAnnouncement(this.data.adminToken, this.data.schoolId, this.data.announcement.trim())
+      wx.showToast({ title: '公告已保存', icon: 'success' })
     } catch (err) {
-      console.log('添加失败', err)
-      wx.showToast({ title: '添加失败', icon: 'error' })
+      wx.showToast({ title: err.message || '保存失败', icon: 'none' })
+    } finally {
+      this.setData({ saving: false })
     }
   },
 
-  async deleteShop(e) {
-    const { canteen, floor, shop } = e.currentTarget.dataset
-
-    wx.showModal({
-      title: '确认删除',
-      content: `确定要删除"${shop}"吗？`,
-      success: async (res) => {
-        if (res.confirm) {
-          const canteenItem = this.data.canteenList.find(c => c._id === canteen._id)
-          if (!canteenItem) return
-
-          const floorItem = canteenItem.floors.find(f => f.name === floor)
-          if (!floorItem) return
-
-          try {
-            const result = await api.callFunction({
-                action: 'deleteShop',
-                schoolId: this.data.schoolId,
-                data: {
-                  canteenId: canteen._id,
-                  floorName: floor,
-                  shopName: shop
-                }
-              })
-
-            if (result.result && result.result.success) {
-              const newShops = floorItem.shops.filter(s => s !== shop)
-              const canteenList = this.data.canteenList.map(c => {
-                if (c._id === canteen._id) {
-                  return {
-                    ...c,
-                    totalShops: c.totalShops - 1,
-                    floors: c.floors.map(f => {
-                      if (f.name === floor) {
-                        return { ...f, shops: newShops }
-                      }
-                      return f
-                    })
-                  }
-                }
-                return c
-              })
-              this.setData({ canteenList })
-              wx.showToast({ title: '删除成功', icon: 'success' })
-            } else {
-              wx.showToast({ title: '删除失败', icon: 'error' })
-            }
-          } catch (err) {
-            console.log('删除失败', err)
-            wx.showToast({ title: '删除失败', icon: 'error' })
-          }
-        }
-      }
-    })
+  onCategoryInput(e) {
+    this.setData({ categoryName: e.detail.value })
   },
 
-  showAddCanteenModal() {
-    this.setData({
-      showCanteenModal: true,
-      newCanteenName: ''
-    })
-  },
-
-  closeCanteenModal() {
-    this.setData({
-      showCanteenModal: false,
-      newCanteenName: ''
-    })
-  },
-
-  onCanteenNameInput(e) {
-    this.setData({ newCanteenName: e.detail.value })
-  },
-
-  async addCanteen() {
-    const name = this.data.newCanteenName.trim()
+  async addCategory() {
+    const name = this.data.categoryName.trim()
     if (!name) {
-      wx.showToast({ title: '请输入食堂名称', icon: 'none' })
+      wx.showToast({ title: '请输入分类名', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '添加中...' })
+    try {
+      const category = await api.createCategory(this.data.adminToken, this.data.schoolId, name)
+      this.setData({
+        categoryName: '',
+        categories: [...this.data.categories, category]
+      })
+      wx.showToast({ title: '分类已添加', icon: 'success' })
+    } catch (err) {
+      wx.showToast({ title: err.message || '添加失败', icon: 'none' })
+    }
+  },
+
+  async updateDishStatus(e) {
+    const { id, status } = e.currentTarget.dataset
+    if (!id || !status) return
 
     try {
-      const res = await api.callFunction({
-          action: 'addCanteen',
-          schoolId: this.data.schoolId,
-          data: { name }
-        })
-
-      if (res.result && res.result.success) {
-        wx.showToast({ title: '添加成功', icon: 'success' })
-        this.closeCanteenModal()
-        this.loadCanteenData()
-      } else {
-        wx.showToast({ title: res.result.message || '添加失败', icon: 'error' })
-      }
-    } catch (e) {
-      console.log('添加食堂失败', e)
-      wx.showToast({ title: '添加失败', icon: 'error' })
+      await api.updateDish(this.data.adminToken, id, { status })
+      wx.showToast({ title: status === 'ACTIVE' ? '已上架' : '已下架', icon: 'success' })
+      await this.loadAdminData()
+    } catch (err) {
+      wx.showToast({ title: err.message || '操作失败', icon: 'none' })
     }
-
-    wx.hideLoading()
   },
 
-  deleteCanteen(e) {
-    const canteen = e.currentTarget.dataset.canteen
-
-    wx.showModal({
-      title: '确认删除',
-      content: `确定要删除"${canteen.name}"吗？该食堂下的所有店铺都将被删除。`,
-      confirmColor: '#ff6b6b',
-      success: async (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '删除中...' })
-
-          try {
-            const result = await api.callFunction({
-                action: 'deleteCanteen',
-                schoolId: this.data.schoolId,
-                data: { canteenId: canteen._id }
-              })
-
-            if (result.result && result.result.success) {
-              wx.showToast({ title: '删除成功', icon: 'success' })
-              this.loadCanteenData()
-            } else {
-              wx.showToast({ title: '删除失败', icon: 'error' })
-            }
-          } catch (err) {
-            console.log('删除食堂失败', err)
-            wx.showToast({ title: '删除失败', icon: 'error' })
-          }
-
-          wx.hideLoading()
-        }
+  openEditSheet(e) {
+    const dish = this.data.dishes.find((item) => item.id === e.currentTarget.dataset.id)
+    if (!dish) return
+    this.setData({
+      showEditSheet: true,
+      editingDishId: dish.id,
+      editForm: {
+        name: dish.name || '',
+        categoryName: dish.categoryName || '',
+        shopName: dish.shopName || '',
+        floorName: dish.floorName || '',
+        description: dish.description || '',
+        imageUrl: dish.imageUrl === DISH_PLACEHOLDER ? '' : dish.imageUrl || ''
       }
     })
   },
 
-  showAddFloorModal(e) {
-    const canteen = e.currentTarget.dataset.canteen
-    this.setData({
-      showFloorModal: true,
-      newFloorName: '',
-      currentCanteenId: canteen._id
-    })
+  closeEditSheet() {
+    this.setData({ showEditSheet: false, editingDishId: '' })
   },
 
-  closeFloorModal() {
-    this.setData({
-      showFloorModal: false,
-      newFloorName: '',
-      currentCanteenId: ''
-    })
+  onEditInput(e) {
+    const field = e.currentTarget.dataset.field
+    this.setData({ [`editForm.${field}`]: e.detail.value })
   },
 
-  onFloorNameInput(e) {
-    this.setData({ newFloorName: e.detail.value })
-  },
-
-  async addFloor() {
-    const floorName = this.data.newFloorName.trim()
-    if (!floorName) {
-      wx.showToast({ title: '请输入楼层名称', icon: 'none' })
+  async saveDishEdit() {
+    const { editForm, editingDishId } = this.data
+    if (!editingDishId) return
+    if (!editForm.name.trim()) {
+      wx.showToast({ title: '菜名不能为空', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '添加中...' })
-
+    this.setData({ saving: true })
     try {
-      const res = await api.callFunction({
-          action: 'addFloor',
-          schoolId: this.data.schoolId,
-          data: {
-            canteenId: this.data.currentCanteenId,
-            floorName
-          }
-        })
-
-      if (res.result && res.result.success) {
-        wx.showToast({ title: '添加成功', icon: 'success' })
-        this.closeFloorModal()
-        this.loadCanteenData()
-      } else {
-        wx.showToast({ title: res.result.message || '添加失败', icon: 'error' })
-      }
-    } catch (e) {
-      console.log('添加楼层失败', e)
-      wx.showToast({ title: '添加失败', icon: 'error' })
+      await api.updateDish(this.data.adminToken, editingDishId, {
+        name: editForm.name.trim(),
+        categoryName: editForm.categoryName.trim(),
+        shopName: editForm.shopName.trim(),
+        floorName: editForm.floorName.trim(),
+        description: editForm.description.trim(),
+        imageUrl: editForm.imageUrl.trim()
+      })
+      wx.showToast({ title: '菜品已保存', icon: 'success' })
+      this.closeEditSheet()
+      await this.loadAdminData()
+    } catch (err) {
+      wx.showToast({ title: err.message || '保存失败', icon: 'none' })
+    } finally {
+      this.setData({ saving: false })
     }
-
-    wx.hideLoading()
-  },
-
-  deleteFloor(e) {
-    const { canteen, floor } = e.currentTarget.dataset
-
-    wx.showModal({
-      title: '确认删除',
-      content: `确定要删除"${floor.name}"吗？该楼层下的所有店铺都将被删除。`,
-      confirmColor: '#ff6b6b',
-      success: async (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '删除中...' })
-
-          try {
-            const result = await api.callFunction({
-                action: 'deleteFloor',
-                schoolId: this.data.schoolId,
-                data: {
-                  canteenId: canteen._id,
-                  floorName: floor.name
-                }
-              })
-
-            if (result.result && result.result.success) {
-              wx.showToast({ title: '删除成功', icon: 'success' })
-              this.loadCanteenData()
-            } else {
-              wx.showToast({ title: '删除失败', icon: 'error' })
-            }
-          } catch (err) {
-            console.log('删除楼层失败', err)
-            wx.showToast({ title: '删除失败', icon: 'error' })
-          }
-
-          wx.hideLoading()
-        }
-      }
-    })
   },
 
   goBack() {
     wx.navigateBack()
-  },
-
-  async showShopEditModal(e) {
-    const { canteen, floor, shop } = e.currentTarget.dataset
-    const shopKey = `${canteen.name}-${floor}-${shop}`
-
-    this.setData({
-      showShopEditModal: true,
-      currentEditShop: shop,
-      currentEditShopKey: shopKey,
-      shopEditData: {
-        signature: '',
-        description: '',
-        openTime: '',
-        closeTime: '',
-        minPrice: '',
-        maxPrice: '',
-        tagsStr: ''
-      }
-    })
-
-    try {
-      const res = await api.callFunction({
-          action: 'getShopStats',
-          schoolId: this.data.schoolId,
-          shopKey: shopKey
-        })
-
-      if (res.result && res.result.success && res.result.data) {
-        const data = res.result.data
-        this.setData({
-          shopEditData: {
-            signature: data.signature || '',
-            description: data.description || '',
-            openTime: data.openTime || '',
-            closeTime: data.closeTime || '',
-            minPrice: data.minPrice || '',
-            maxPrice: data.maxPrice || '',
-            tagsStr: (data.tags || []).join(',')
-          }
-        })
-      }
-    } catch (e) {
-      console.log('加载店铺信息失败', e)
-    }
-  },
-
-  closeShopEditModal() {
-    this.setData({
-      showShopEditModal: false,
-      currentEditShop: '',
-      currentEditShopKey: '',
-      shopEditData: {
-        signature: '',
-        description: '',
-        openTime: '',
-        closeTime: '',
-        minPrice: '',
-        maxPrice: '',
-        tagsStr: ''
-      }
-    })
-  },
-
-  onShopEditInput(e) {
-    const field = e.currentTarget.dataset.field
-    const value = e.detail.value
-    this.setData({
-      [`shopEditData.${field}`]: value
-    })
-  },
-
-  async saveShopEdit() {
-    const { currentEditShopKey, shopEditData } = this.data
-
-    if (!currentEditShopKey) {
-      wx.showToast({ title: '店铺信息错误', icon: 'none' })
-      return
-    }
-
-    wx.showLoading({ title: '保存中...' })
-
-    try {
-      const tags = shopEditData.tagsStr
-        ? shopEditData.tagsStr.split(',').map(t => t.trim()).filter(t => t)
-        : []
-
-      const res = await api.callFunction({
-          action: 'updateShopInfo',
-          schoolId: this.data.schoolId,
-          data: {
-            shopKey: currentEditShopKey,
-            signature: shopEditData.signature,
-            description: shopEditData.description,
-            openTime: shopEditData.openTime,
-            closeTime: shopEditData.closeTime,
-            minPrice: shopEditData.minPrice,
-            maxPrice: shopEditData.maxPrice,
-            tags: tags
-          }
-        })
-
-      wx.hideLoading()
-
-      if (res.result && res.result.success) {
-        wx.showToast({ title: '保存成功', icon: 'success' })
-        this.closeShopEditModal()
-      } else {
-        wx.showToast({ title: res.result.message || '保存失败', icon: 'error' })
-      }
-    } catch (e) {
-      wx.hideLoading()
-      console.log('保存店铺信息失败', e)
-      wx.showToast({ title: '保存失败', icon: 'error' })
-    }
   }
 })

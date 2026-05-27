@@ -130,6 +130,34 @@ miniprogram-10/
    - 首次运行会自动初始化默认食堂数据
    - 或通过管理后台手动添加
 
+## 新后端生产部署与上游层级导入
+
+当前 fork 已加入 Fastify + Prisma + Postgres 后端。生产环境首次部署时，若只想导入上游仓库的学校/食堂/楼层/店铺层级，不要运行 `npm run prisma:seed`，因为 seed 会额外创建示例菜品和评分。
+
+```bash
+git clone https://github.com/tantan1hao/miaomiaomiao-together.git /opt/miaomiaomiao-together
+cd /opt/miaomiaomiao-together/server
+npm ci
+cp .env.example .env
+# 编辑 .env：DATABASE_URL、JWT_SECRET、MASTER_PASSWORD、BISTU_ADMIN_PASSWORD、PUBLIC_BASE_URL
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:import:upstream-hierarchy
+npm start
+```
+
+上游层级导入脚本会 upsert `legacyId=bistu` 的学校，以及一食堂/二食堂的完整楼层和店铺 JSON；它不会创建 `Dish`、`Rating`、`Category` 或图片数据。导入完成后可用以下接口验证：
+
+```bash
+curl http://127.0.0.1:3002/dish-api/health
+curl http://127.0.0.1:3002/dish-api/schools
+curl -X POST http://127.0.0.1:3002/dish-api/miniprogram/call \
+  -H 'content-type: application/json' \
+  -d '{"action":"getCanteenData","schoolId":"bistu"}'
+```
+
+建议用 `systemd` 托管后端进程，并由 Nginx 代理 `/dish-api/` 到 `127.0.0.1:3002`，代理 `/dish-uploads/` 到 `/var/lib/dish-rank/uploads`。模板见 `server/deploy/dish-rank-server.service.example` 和 `server/deploy/nginx-dish.conf.example`。
+
 ### 配置说明
 
 在 `project.config.json` 中修改以下配置：

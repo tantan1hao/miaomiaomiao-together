@@ -17,7 +17,7 @@ page {
   box-sizing: border-box;
   background:
     linear-gradient(135deg, rgba(17, 17, 22, 0.86), rgba(17, 17, 22, 0.52)),
-    linear-gradient(135deg, #f2543d 0%, #f7ca45 44%, #1b8f8f 100%);
+    linear-gradient(135deg, #b31921 0%, #ded8cd 44%, #b31921 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -32,7 +32,7 @@ page {
 
 .kicker {
   font-size: 22rpx;
-  color: #e8ff55;
+  color: #b31921;
   font-weight: 900;
   margin-bottom: 18rpx;
 }
@@ -63,7 +63,7 @@ page {
 .cover-score .score {
   font-size: 72rpx;
   line-height: 1;
-  color: #e8ff55;
+  color: #b31921;
   font-weight: 900;
 }
 
@@ -105,8 +105,8 @@ page {
   margin-bottom: 20rpx;
   padding: 18rpx 22rpx;
   border-radius: 12rpx;
-  background: #dcfbf5;
-  color: #146b68;
+  background: #f7f4ec;
+  color: #111111;
   font-size: 26rpx;
   font-weight: 700;
 }
@@ -136,14 +136,14 @@ page {
 }
 
 .rank-number {
-  color: #f2543d;
+  color: #b31921;
   font-size: 32rpx;
   line-height: 1;
   font-weight: 900;
 }
 
 .featured .rank-number {
-  color: #e8ff55;
+  color: #b31921;
   font-size: 56rpx;
 }
 
@@ -162,9 +162,9 @@ page {
 
 .poster {
   background:
-    radial-gradient(circle at 34% 38%, #f7ca45 0 18%, transparent 19%),
-    radial-gradient(circle at 58% 48%, #f2543d 0 15%, transparent 16%),
-    radial-gradient(circle at 48% 54%, #1b8f8f 0 22%, transparent 23%),
+    radial-gradient(circle at 34% 38%, #ded8cd 0 18%, transparent 19%),
+    radial-gradient(circle at 58% 48%, #b31921 0 15%, transparent 16%),
+    radial-gradient(circle at 48% 54%, #b31921 0 22%, transparent 23%),
     #ffe5b7;
 }
 
@@ -181,10 +181,27 @@ page {
   font-weight: 900;
 }
 
+.dish-headline {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #111116;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 1.12;
+  text-shadow: 0.3rpx 0.3rpx 0.8rpx rgba(0, 0, 0, 0.16);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .featured .dish-name {
   margin-top: 8rpx;
   color: #ffffff;
   font-size: 48rpx;
+}
+
+.featured .dish-headline {
+  color: #ffffff;
+  font-size: 44rpx;
 }
 
 .dish-place,
@@ -241,6 +258,7 @@ page {
 
 .stars {
   grid-column: 2 / 4;
+  align-items: center;
   display: flex;
   gap: 10rpx;
 }
@@ -262,9 +280,22 @@ page {
   font-weight: 900;
 }
 
+.vote-label {
+  flex: 0 0 auto;
+  height: 52rpx;
+  padding: 0 14rpx;
+  border: 2rpx solid #b31921;
+  color: #b31921;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
 .featured .star {
   background: rgba(232, 255, 85, 0.16);
-  color: #e8ff55;
+  color: #b31921;
 }
 
 .empty {
@@ -343,7 +374,7 @@ textarea {
 .category-chip {
   padding: 12rpx 18rpx;
   border-radius: 10rpx;
-  background: #e8ff55;
+  background: #b31921;
   color: #111116;
   font-size: 24rpx;
   font-weight: 800;
@@ -352,8 +383,8 @@ textarea {
 .image-picker {
   min-height: 220rpx;
   border-radius: 14rpx;
-  border: 2rpx dashed #1b8f8f;
-  background: #dcfbf5;
+  border: 2rpx dashed #b31921;
+  background: #f7f4ec;
   overflow: hidden;
 }
 
@@ -372,7 +403,7 @@ textarea {
 
 .image-title {
   font-size: 30rpx;
-  color: #146b68;
+  color: #111111;
   font-weight: 900;
 }
 
@@ -391,7 +422,7 @@ textarea {
 }
 
 .image-meta text:last-child {
-  color: #f2543d;
+  color: #b31921;
   font-weight: 800;
 }
 
@@ -399,7 +430,7 @@ textarea {
   width: 100%;
   height: 92rpx;
   border-radius: 12rpx;
-  background: #f2543d;
+  background: #b31921;
   color: #ffffff;
   font-size: 30rpx;
   font-weight: 900;
@@ -407,4 +438,263 @@ textarea {
 
 .submit-btn::after {
   border: none;
+}
+
+/* Poster newspaper redesign */
+page {
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.036) 0, rgba(0, 0, 0, 0.036) 0.7px, transparent 1.1px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.016) 0, rgba(0, 0, 0, 0.016) 1rpx, transparent 1rpx, transparent 6rpx),
+    #e9e3d6;
+  color: #111111;
+}
+
+.page {
+  padding: 24rpx 20rpx 64rpx;
+  background: transparent;
+}
+
+.cover,
+.dish-row,
+.form-card,
+.notice {
+  border-radius: 0;
+  border: 3rpx solid #111111;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.014) 0, rgba(0, 0, 0, 0.014) 1rpx, transparent 1rpx, transparent 6rpx),
+    #f7f4ec;
+  box-shadow: 8rpx 8rpx 0 rgba(0, 0, 0, 0.18);
+}
+
+.cover {
+  min-height: 314rpx;
+  padding: 24rpx;
+  color: #111111;
+  border-top: 22rpx solid #b31921;
+}
+
+.cover::after {
+  content: '';
+  display: block;
+  width: 156rpx;
+  height: 10rpx;
+  margin-top: 20rpx;
+  background:
+    repeating-linear-gradient(90deg, #111111 0, #111111 10rpx, transparent 10rpx, transparent 18rpx);
+}
+
+.kicker {
+  color: #b31921;
+  font-size: 20rpx;
+  font-weight: 900;
+}
+
+.title {
+  color: #080808;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 72rpx;
+  font-weight: 900;
+  line-height: 0.9;
+  text-shadow:
+    0.8rpx 0.8rpx 1rpx rgba(0, 0, 0, 0.22),
+    -0.4rpx 0 0.7rpx rgba(0, 0, 0, 0.12);
+}
+
+.school {
+  color: #333333;
+  font-weight: 800;
+}
+
+.cover-score {
+  align-self: stretch;
+  justify-content: space-between;
+  padding-top: 20rpx;
+  border-top: 3rpx solid #111111;
+}
+
+.cover-score .score {
+  color: #b31921;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.cover-score .name {
+  color: #111111;
+}
+
+.panel-tabs {
+  gap: 10rpx;
+  margin: 20rpx 0;
+}
+
+.panel-tab {
+  height: 66rpx;
+  border-radius: 0;
+  border: 2rpx solid #111111;
+  color: #111111;
+  background: #f7f4ec;
+  box-shadow: 4rpx 4rpx 0 rgba(0, 0, 0, 0.15);
+}
+
+.panel-tab.active {
+  color: #ffffff;
+  border-color: #111111;
+  background: #111111;
+  box-shadow: inset 0 -6rpx 0 #b31921;
+}
+
+.notice {
+  color: #111111;
+  border-left: 14rpx solid #b31921;
+  font-weight: 900;
+}
+
+.rank-section {
+  gap: 14rpx;
+}
+
+.dish-row {
+  grid-template-columns: 54rpx 118rpx 1fr;
+  gap: 14rpx;
+  padding: 14rpx;
+}
+
+.dish-row.featured {
+  grid-template-columns: 1fr;
+  color: #111111;
+  border-top: 18rpx solid #111111;
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.05) 0, rgba(0, 0, 0, 0.05) 0.8px, transparent 1.2px),
+    #f7f4ec;
+  background-size: 12rpx 12rpx, 100% 100%;
+}
+
+.rank-number,
+.featured .rank-number {
+  color: #b31921;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 900;
+}
+
+.featured .rank-number {
+  font-size: 58rpx;
+}
+
+.dish-image {
+  width: 118rpx;
+  height: 118rpx;
+  border-radius: 0;
+  border: 2rpx solid #111111;
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.2) 0, rgba(0, 0, 0, 0.2) 1rpx, transparent 2rpx),
+    #e5e1d8;
+  background-size: 8rpx 8rpx, 100% 100%;
+}
+
+.hero-image,
+.featured .poster {
+  height: 286rpx;
+}
+
+.poster {
+  background:
+    radial-gradient(circle at 34% 38%, rgba(179, 25, 33, 0.45) 0 18%, transparent 19%),
+    radial-gradient(circle at 58% 48%, rgba(0, 0, 0, 0.18) 0 15%, transparent 16%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.12) 0, rgba(0, 0, 0, 0.12) 1rpx, transparent 1rpx, transparent 8rpx),
+    #e5e1d8;
+}
+
+.dish-headline,
+.featured .dish-headline,
+.dish-name,
+.featured .dish-name,
+.dish-score,
+.featured .dish-score {
+  color: #111111;
+}
+
+.dish-name {
+  font-weight: 900;
+}
+
+.featured .dish-name {
+  font-size: 48rpx;
+}
+
+.dish-place,
+.dish-desc,
+.featured .dish-place,
+.featured .dish-desc,
+.rating-count,
+.featured .rating-count {
+  color: #333333;
+  font-weight: 700;
+}
+
+.dish-score {
+  color: #b31921;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.stars {
+  gap: 8rpx;
+}
+
+.star,
+.featured .star {
+  border-radius: 0;
+  border: 2rpx solid #111111;
+  color: #b31921;
+  background: #f7f4ec;
+  box-shadow: 3rpx 3rpx 0 rgba(0, 0, 0, 0.16);
+}
+
+.form-card {
+  padding: 22rpx;
+}
+
+.form-title {
+  color: #111111;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 900;
+}
+
+.label {
+  color: #111111;
+}
+
+input,
+textarea {
+  border-radius: 0;
+  border: 2rpx solid #111111;
+  background: #fffdf7;
+}
+
+.category-chip {
+  border-radius: 0;
+  border: 2rpx solid #111111;
+  color: #111111;
+  background: #f7f4ec;
+}
+
+.image-picker {
+  border-radius: 0;
+  border: 3rpx dashed #b31921;
+  background: #f7f4ec;
+}
+
+.image-title,
+.image-meta text:last-child {
+  color: #b31921;
+}
+
+.image-note,
+.image-meta {
+  color: #333333;
+}
+
+.submit-btn {
+  border-radius: 0;
+  color: #ffffff;
+  background: #b31921;
+  box-shadow: 6rpx 6rpx 0 #111111;
 }

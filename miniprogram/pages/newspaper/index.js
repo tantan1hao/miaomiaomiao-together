@@ -6,14 +6,16 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const EDITION_COUNT = 4;
 const KEY_TURN_THRESHOLD = 0.34;
 const KEY_TURN_RANGE = 210;
+const DISH_PLACEHOLDER = '/images/dish-placeholder.svg';
 const sampleDishes = [
     {
         id: 'sample-1',
         name: '黄焖鸡米饭',
         description: '酱香浓郁，土豆软糯，是不知道吃什么时最稳的一道。',
-        imageUrl: '',
+        imageUrl: DISH_PLACEHOLDER,
         categoryName: '盖饭',
         placeText: '一食堂 · 一楼 · 黄焖鸡米饭',
+        shopText: '黄焖鸡米饭',
         scoreText: '4.9',
         ratingText: '126 人评分',
         headline: '午饭前的稳妥答案仍然来自黄焖鸡窗口',
@@ -23,9 +25,10 @@ const sampleDishes = [
         id: 'sample-2',
         name: '麻辣香锅',
         description: '适合多人拼单，辣度稳定，午饭高峰也很有存在感。',
-        imageUrl: '',
+        imageUrl: DISH_PLACEHOLDER,
         categoryName: '麻辣',
         placeText: '一食堂 · 一楼 · 麻辣香锅',
+        shopText: '麻辣香锅',
         scoreText: '4.7',
         ratingText: '94 人评分',
         headline: '麻辣香锅在多人拼单中继续占据显眼位置',
@@ -35,9 +38,10 @@ const sampleDishes = [
         id: 'sample-3',
         name: '桂林米粉',
         description: '出餐快，汤粉和拌粉都适合赶课前后。',
-        imageUrl: '',
+        imageUrl: DISH_PLACEHOLDER,
         categoryName: '粉面',
         placeText: '二食堂 · 一楼 · 桂林米粉',
+        shopText: '桂林米粉',
         scoreText: '4.6',
         ratingText: '72 人评分',
         headline: '赶课同学把桂林米粉推上速度榜',
@@ -50,8 +54,30 @@ const sampleCategories = [
     { id: 'cat-3', name: '麻辣' },
     { id: 'cat-4', name: '饮品' },
 ];
+const EMPTY_RANDOM_PICK = {
+    canteen: '',
+    floor: '',
+    shop: '暂无窗口数据',
+    place: '等待食堂窗口同步',
+    key: '',
+};
 function formatTwo(value) {
     return value < 10 ? `0${value}` : `${value}`;
+}
+function buildDishHeadline(dish) {
+    const name = dish.name || '这道菜';
+    const count = Number(dish.ratingCount || 0);
+    if (dish.headline)
+        return dish.headline;
+    if (count >= 20)
+        return `${name}收获${count}张食堂票，继续留在今日版面`;
+    if (count > 0)
+        return `${name}拿到${count}张新票，正在冲上风味榜`;
+    if (dish.shopName)
+        return `${dish.shopName}把${name}送上今日候选`;
+    if (dish.categoryName)
+        return `${name}登上${dish.categoryName}栏目，等待第一张票`;
+    return `${name}成为今天的食堂头条候选`;
 }
 function normalizeDish(dish) {
     const place = [dish.canteenName, dish.floorName, dish.shopName].filter(Boolean).join(' · ');
@@ -61,17 +87,73 @@ function normalizeDish(dish) {
         id: dish.id,
         name,
         description,
-        imageUrl: dish.imageUrl || '',
+        imageUrl: dish.imageUrl || DISH_PLACEHOLDER,
         categoryName: dish.categoryName || '未分类',
         placeText: place || '校园食堂',
+        shopText: dish.shopName || place || '校园食堂',
         scoreText: Number(dish.avgScore || 0).toFixed(1),
         ratingText: `${dish.ratingCount || 0} 人评分`,
-        headline: `${name} 登上今日食堂版面`,
+        headline: buildDishHeadline(dish),
         canRate: true,
     };
 }
 function pickDish(rows, index) {
     return rows[index] || rows[0] || sampleDishes[0];
+}
+function ratingCountOf(row) {
+    return Number.parseInt(row.ratingText, 10) || 0;
+}
+function compareDishRank(a, b) {
+    const scoreDiff = Number(b.scoreText || 0) - Number(a.scoreText || 0);
+    if (scoreDiff !== 0)
+        return scoreDiff;
+    return ratingCountOf(b) - ratingCountOf(a);
+}
+function mergeDisplayDish(existing, dish) {
+    const next = normalizeDish(dish);
+    if (!existing)
+        return next;
+    return {
+        ...next,
+        name: dish.name ? next.name : existing.name,
+        description: dish.description ? next.description : existing.description,
+        imageUrl: dish.imageUrl ? next.imageUrl : existing.imageUrl,
+        categoryName: dish.categoryName ? next.categoryName : existing.categoryName,
+        placeText: (dish.canteenName || dish.floorName || dish.shopName) ? next.placeText : existing.placeText,
+        shopText: dish.shopName ? next.shopText : existing.shopText,
+        canRate: existing.canRate || next.canRate,
+    };
+}
+function buildRandomPool(canteens) {
+    const pool = [];
+    (canteens || []).forEach((canteen) => {
+        const canteenName = canteen.name || '食堂';
+        const floors = Array.isArray(canteen.floors) ? canteen.floors : [];
+        floors.forEach((floor) => {
+            const floorName = floor.name || '楼层';
+            const shops = Array.isArray(floor.shops) ? floor.shops : [];
+            shops.forEach((shop) => {
+                const shopName = String(shop || '').trim();
+                if (!shopName)
+                    return;
+                pool.push({
+                    canteen: canteenName,
+                    floor: floorName,
+                    shop: shopName,
+                    place: `${canteenName} · ${floorName}`,
+                    key: `${canteenName}-${floorName}-${shopName}`,
+                });
+            });
+        });
+    });
+    return pool;
+}
+function pickRandomShop(canteens) {
+    const pool = buildRandomPool(canteens);
+    if (!pool.length)
+        return EMPTY_RANDOM_PICK;
+    const index = Math.floor(Math.random() * pool.length);
+    return pool[index];
 }
 Page({
     data: {
@@ -93,6 +175,7 @@ Page({
         thirdDish: sampleDishes[2],
         rankingRows: sampleDishes,
         categoryRows: sampleCategories,
+        randomPick: EMPTY_RANDOM_PICK,
         ratingScoreOptions: [1, 2, 3, 4, 5],
         announcementText: '今日榜单正在整理，欢迎投递你在食堂发现的好味道。',
         showSubmitSheet: false,
@@ -116,8 +199,11 @@ Page({
     turnProgress: 0,
     turnTimer: 0,
     foldTimer: 0,
+    adminTapCount: 0,
+    adminTapTimer: 0,
     dishes: sampleDishes,
     categoriesCache: sampleCategories,
+    canteenRows: [],
     onLoad() {
         this.setupPage();
         this.loadNewspaperData();
@@ -127,6 +213,8 @@ Page({
             clearTimeout(this.foldTimer);
         if (this.turnTimer)
             clearInterval(this.turnTimer);
+        if (this.adminTapTimer)
+            clearTimeout(this.adminTapTimer);
     },
     setupPage() {
         const system = wx.getSystemInfoSync();
@@ -143,22 +231,27 @@ Page({
     async loadNewspaperData() {
         this.setData({ networkNote: '正在更新' });
         try {
-            const [rankRows, categoryRows, announcementText] = await Promise.all([
+            const [rankRows, categoryRows, announcementText, canteenRows] = await Promise.all([
                 (0, api_1.rankings)(SCHOOL_ID, 20),
                 (0, api_1.categories)(SCHOOL_ID),
                 (0, api_1.announcement)(SCHOOL_ID),
+                (0, api_1.canteenData)(SCHOOL_ID).catch(() => []),
             ]);
             this.dishes = rankRows.length ? rankRows.map(normalizeDish) : sampleDishes;
             this.categoriesCache = categoryRows.length ? categoryRows : sampleCategories;
+            this.canteenRows = Array.isArray(canteenRows) ? canteenRows : [];
             this.setNewspaperData(rankRows.length ? '实时数据' : '暂无真实菜品', announcementText || '暂无公告，今日编辑部把版面留给同学投稿。');
         }
         catch (error) {
             this.dishes = sampleDishes;
             this.categoriesCache = sampleCategories;
-            this.setNewspaperData('离线样张', '后端暂未连接，当前展示报纸样张。');
+            this.canteenRows = [];
+            this.setNewspaperData('离线样张', '暂时没有更新到最新内容，当前展示报纸样张。');
         }
     },
     setNewspaperData(networkNote, announcementText) {
+        const currentRandom = this.data.randomPick;
+        const randomPick = currentRandom && currentRandom.key ? currentRandom : pickRandomShop(this.canteenRows);
         this.setData({
             networkNote,
             announcementText,
@@ -167,7 +260,27 @@ Page({
             thirdDish: pickDish(this.dishes, 2),
             rankingRows: this.dishes.slice(0, 8),
             categoryRows: this.categoriesCache.slice(0, 10),
+            randomPick,
         });
+    },
+    updateRatedDishDisplay(dish) {
+        if (!dish || !dish.id)
+            return false;
+        const existing = this.dishes.find((row) => row.id === dish.id);
+        const updated = mergeDisplayDish(existing, dish);
+        const nextDishes = this.dishes.filter((row) => row.id !== dish.id);
+        nextDishes.push(updated);
+        nextDishes.sort(compareDishRank);
+        this.dishes = nextDishes;
+        this.setNewspaperData(this.data.networkNote, this.data.announcementText);
+        return true;
+    },
+    rollRandomPick() {
+        const next = pickRandomShop(this.canteenRows);
+        this.setData({ randomPick: next });
+        if (!next.key) {
+            wx.showToast({ title: '暂无窗口数据', icon: 'none' });
+        }
     },
     onSwiperChange(event) {
         const currentIndex = Number(event.detail.current || 0);
@@ -464,7 +577,7 @@ Page({
         ctx.setFillStyle('#0b0b0b');
         ctx.setFontSize(12);
         const previewLines = [
-            ['校园食堂独立观察', '头版头条与风味短讯', '白纸黑字绿色点缀'],
+            ['校园食堂独立观察', '头版头条与风味短讯', '白纸黑字红色点缀'],
             ['名次   菜品           评分', '01    黄焖鸡米饭     4.9', '02    麻辣香锅       4.7', '03    桂林米粉       4.6'],
             ['投稿单 / 图片 / 窗口', '菜名 分类 楼层 描述', '进入明天版面'],
             ['公告栏 / 分类索引', '刷新今日版面', '回到头版'],
@@ -480,7 +593,35 @@ Page({
     refreshData() {
         this.loadNewspaperData();
     },
-    openSubmitSheet() {
+    onMastheadTap() {
+        if (this.adminTapTimer)
+            clearTimeout(this.adminTapTimer);
+        this.adminTapCount += 1;
+        if (this.adminTapCount >= 6) {
+            this.adminTapCount = 0;
+            wx.navigateTo({
+                url: `/pages/admin/index?schoolId=${SCHOOL_ID}&schoolName=${encodeURIComponent('北京信息科技大学')}`,
+            });
+            return;
+        }
+        this.adminTapTimer = setTimeout(() => {
+            this.adminTapCount = 0;
+            this.adminTapTimer = 0;
+        }, 1400);
+    },
+    async ensureLoggedInForSubmit() {
+        try {
+            return await (0, api_1.getUserToken)();
+        }
+        catch (error) {
+            wx.showToast({ title: error instanceof Error ? error.message : '请先登录', icon: 'none' });
+            return '';
+        }
+    },
+    async openSubmitSheet() {
+        const token = await this.ensureLoggedInForSubmit();
+        if (!token)
+            return;
         this.setData({ showSubmitSheet: true });
     },
     closeSubmitSheet() {
@@ -490,7 +631,10 @@ Page({
         const field = event.currentTarget.dataset.field;
         this.setData({ [`form.${field}`]: event.detail.value });
     },
-    chooseImage() {
+    async chooseImage() {
+        const token = await this.ensureLoggedInForSubmit();
+        if (!token)
+            return;
         wx.chooseImage({
             count: 1,
             sizeType: ['compressed'],
@@ -527,9 +671,11 @@ Page({
         wx.showLoading({ title: '评分中' });
         try {
             const token = await (0, api_1.getUserToken)();
-            await (0, api_1.rateDish)(token, dishId, score);
+            const ratedDish = await (0, api_1.rateDish)(token, dishId, score);
+            if (!this.updateRatedDishDisplay(ratedDish)) {
+                await this.loadNewspaperData();
+            }
             wx.showToast({ title: '已评分', icon: 'success' });
-            await this.loadNewspaperData();
         }
         catch (error) {
             wx.showToast({ title: error instanceof Error ? error.message : '评分失败', icon: 'none' });
@@ -552,6 +698,9 @@ Page({
         });
     },
     async submitDish() {
+        const token = await this.ensureLoggedInForSubmit();
+        if (!token)
+            return;
         const form = this.data.form;
         const name = form.name.trim();
         if (!name) {
@@ -561,7 +710,6 @@ Page({
         this.setData({ submitting: true });
         wx.showLoading({ title: '投稿中' });
         try {
-            const token = await (0, api_1.getUserToken)();
             await (0, api_1.uploadDish)(token, {
                 schoolId: SCHOOL_ID,
                 name,
