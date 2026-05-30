@@ -1,20 +1,27 @@
 {
   "pages": [
-    "pages/index/index",
     "pages/newspaper/index",
-    "pages/dishes/index",
     "pages/admin/index",
-    "pages/masterAdmin/index",
-    "pages/suggestion/index"
+    "pages/auth/register/index"
   ],
   "window": {
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom",
     "backgroundColor": "#eee9dd",
-    "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#eee9dd",
-    "navigationBarTitleText": "今天吃什么",
-    "navigationBarTextStyle": "black"
+    "backgroundTextStyle": "dark"
   },
-  "sitemapLocation": "sitemap.json",
   "style": "v2",
+  "rendererOptions": {
+    "skyline": {
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "tagNameStyleIsolation": "legacy",
+      "disableABTest": true,
+      "sdkVersionBegin": "3.0.0",
+      "sdkVersionEnd": "15.255.255"
+    }
+  },
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

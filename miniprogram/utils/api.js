@@ -1,284 +1,235 @@
-const API_BASE_STORAGE_KEY = 'dishApiBaseUrl'
-const TOKEN_STORAGE_KEY = 'dishUserToken'
-const DEFAULT_API_BASE_URL = 'https://tantanzhang.cn/dish-api'
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getApiBaseUrl = getApiBaseUrl;
+exports.request = request;
+exports.getStoredToken = getStoredToken;
+exports.getStoredProfile = getStoredProfile;
+exports.isRegistered = isRegistered;
+exports.logout = logout;
+exports.registerOrLogin = registerOrLogin;
+exports.rankings = rankings;
+exports.categories = categories;
+exports.announcement = announcement;
+exports.canteenData = canteenData;
+exports.adminLogin = adminLogin;
+exports.dishes = dishes;
+exports.updateDish = updateDish;
+exports.setAnnouncement = setAnnouncement;
+exports.createCategory = createCategory;
+exports.rateDish = rateDish;
+exports.uploadDish = uploadDish;
+const API_BASE_STORAGE_KEY = 'dishApiBaseUrl';
+const TOKEN_STORAGE_KEY = 'dishUserToken';
+const PROFILE_STORAGE_KEY = 'dishUserProfile';
+const DEFAULT_API_BASE_URL = 'https://tantanzhang.cn/dish-api';
 function trimTrailingSlash(value) {
-  return String(value || '').replace(/\/+$/, '')
+    return value.replace(/\/+$/, '');
 }
-
 function getApiBaseUrl() {
-  let appBaseUrl = ''
-
-  try {
-    const app = getApp()
-    appBaseUrl = app && app.globalData ? app.globalData.apiBaseUrl : ''
-  } catch (e) {
-    appBaseUrl = ''
-  }
-
-  const storedBaseUrl = wx.getStorageSync(API_BASE_STORAGE_KEY)
-  return trimTrailingSlash(storedBaseUrl || appBaseUrl || DEFAULT_API_BASE_URL)
+    const app = getApp();
+    const storedBaseUrl = wx.getStorageSync(API_BASE_STORAGE_KEY);
+    return trimTrailingSlash(storedBaseUrl || app.globalData.apiBaseUrl || DEFAULT_API_BASE_URL);
 }
-
-function setApiBaseUrl(baseUrl) {
-  const normalized = trimTrailingSlash(baseUrl)
-  wx.setStorageSync(API_BASE_STORAGE_KEY, normalized)
-  return normalized
+function queryString(params) {
+    const parts = Object.keys(params)
+        .filter((key) => params[key] !== undefined && params[key] !== '')
+        .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`);
+    return parts.length ? `?${parts.join('&')}` : '';
 }
-
-function buildHeaders(headers = {}, token = '') {
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...headers
-  }
+function authHeader(token) {
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
-
-function buildAuthHeaders(token = '') {
-  return token ? { Authorization: `Bearer ${token}` } : {}
+function cleanPayload(payload) {
+    const data = {};
+    Object.keys(payload).forEach((key) => {
+        const value = payload[key];
+        if (value !== undefined && value !== '')
+            data[key] = value;
+    });
+    return data;
 }
-
-function cleanPayload(payload = {}) {
-  return Object.keys(payload).reduce((result, key) => {
-    const value = payload[key]
-    if (value !== undefined && value !== null && value !== '') {
-      result[key] = value
-    }
-    return result
-  }, {})
-}
-
-function queryString(params = {}) {
-  const parts = Object.keys(params)
-    .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== '')
-    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-  return parts.length ? `?${parts.join('&')}` : ''
-}
-
 function unwrap(body) {
-  return body && body.data !== undefined ? body.data : body
+    if (body.success === false)
+        throw new Error(body.message || '请求失败');
+    return body.data;
 }
-
 function request(path, options = {}) {
-  const {
-    method = 'GET',
-    data,
-    headers,
-    token,
-    rejectOnBusinessError = true
-  } = options
-
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: `${getApiBaseUrl()}${path}`,
-      method,
-      data,
-      header: buildHeaders(headers, token),
-      success(res) {
-        const body = res.data || {}
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          reject(new Error(body.message || `请求失败：${res.statusCode}`))
-          return
-        }
-        if (rejectOnBusinessError && body.success === false) {
-          reject(new Error(body.message || '请求失败'))
-          return
-        }
-        resolve(body)
-      },
-      fail(err) {
-        reject(new Error(err.errMsg || '网络请求失败'))
-      }
-    })
-  })
+    return new Promise((resolve, reject) => {
+        wx.request({
+            url: `${getApiBaseUrl()}${path}`,
+            method: options.method || 'GET',
+            data: options.data,
+            header: {
+                'Content-Type': 'application/json',
+                ...authHeader(options.token),
+            },
+            success(res) {
+                const body = res.data || {};
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    reject(new Error(body.message || `请求失败：${res.statusCode}`));
+                    return;
+                }
+                try {
+                    resolve(unwrap(body));
+                }
+                catch (error) {
+                    reject(error);
+                }
+            },
+            fail(err) {
+                reject(new Error(err.errMsg || '网络请求失败'));
+            },
+        });
+    });
 }
-
-async function callFunction(data) {
-  const result = await request('/miniprogram/call', {
-    method: 'POST',
-    data,
-    rejectOnBusinessError: false
-  })
-
-  return { result }
-}
-
-async function categories(schoolId) {
-  const body = await request(`/categories${queryString({ schoolId })}`)
-  return unwrap(body)
-}
-
-async function rankings(schoolId, limit = 50) {
-  const body = await request(`/rankings${queryString({ schoolId, limit })}`)
-  return unwrap(body)
-}
-
-async function announcement(schoolId) {
-  const body = await request(`/announcements${queryString({ schoolId })}`)
-  return unwrap(body)
-}
-
-async function canteenData(schoolId = 'bistu') {
-  const body = await request('/miniprogram/call', {
-    method: 'POST',
-    data: { action: 'getCanteenData', schoolId }
-  })
-  return unwrap(body)
-}
-
-async function adminLogin(password) {
-  const body = await request('/admin/login', {
-    method: 'POST',
-    data: { password }
-  })
-  return unwrap(body)
-}
-
-async function dishes(schoolId, includeOffline = false) {
-  const body = await request(`/dishes${queryString({
-    schoolId,
-    includeOffline: includeOffline ? '1' : '0',
-    limit: 200
-  })}`)
-  return unwrap(body)
-}
-
-async function updateDish(token, dishId, patch) {
-  const body = await request(`/dishes/${dishId}`, {
-    method: 'PUT',
-    token,
-    data: patch
-  })
-  return unwrap(body)
-}
-
-async function setAnnouncement(token, schoolId, content) {
-  const body = await request('/announcements', {
-    method: 'PUT',
-    token,
-    data: { schoolId, content }
-  })
-  return unwrap(body)
-}
-
-async function createCategory(token, schoolId, name) {
-  const body = await request('/categories', {
-    method: 'POST',
-    token,
-    data: { schoolId, name }
-  })
-  return unwrap(body)
-}
-
-async function rateDish(token, dishId, score) {
-  const body = await request('/ratings', {
-    method: 'POST',
-    token,
-    data: { dishId, score }
-  })
-  return unwrap(body)
-}
-
-function uploadDish(token, payload, imagePath = '') {
-  const formData = cleanPayload(payload)
-
-  if (!imagePath) {
-    return request('/dishes', {
-      method: 'POST',
-      token,
-      data: formData
-    }).then(unwrap)
-  }
-
-  return new Promise((resolve, reject) => {
-    wx.uploadFile({
-      url: `${getApiBaseUrl()}/dishes`,
-      filePath: imagePath,
-      name: 'image',
-      formData,
-      header: buildAuthHeaders(token),
-      success(res) {
-        let body = {}
-        try {
-          body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-        } catch (e) {
-          reject(new Error('上传响应解析失败'))
-          return
-        }
-
-        if (res.statusCode < 200 || res.statusCode >= 300 || body.success === false) {
-          reject(new Error(body.message || `上传失败：${res.statusCode}`))
-          return
-        }
-        resolve(unwrap(body))
-      },
-      fail(err) {
-        reject(new Error(err.errMsg || '上传失败'))
-      }
-    })
-  })
-}
-
 function wxLogin() {
-  return new Promise((resolve, reject) => {
-    wx.login({
-      success(res) {
-        if (res.code) {
-          resolve(res.code)
-        } else {
-          reject(new Error('微信登录失败'))
-        }
-      },
-      fail(err) {
-        reject(new Error(err.errMsg || '微信登录失败'))
-      }
-    })
-  })
+    return new Promise((resolve, reject) => {
+        wx.login({
+            success(res) {
+                if (res.code) {
+                    resolve(res.code);
+                }
+                else {
+                    reject(new Error('微信登录失败'));
+                }
+            },
+            fail(err) {
+                reject(new Error(err.errMsg || '微信登录失败'));
+            },
+        });
+    });
 }
-
-async function login(profile = {}) {
-  const code = await wxLogin()
-  const body = await request('/auth/wechat', {
-    method: 'POST',
-    data: {
-      code,
-      nickname: profile.nickname || '',
-      avatarUrl: profile.avatarUrl || ''
+function getStoredToken() {
+    return wx.getStorageSync(TOKEN_STORAGE_KEY) || '';
+}
+function getStoredProfile() {
+    const raw = wx.getStorageSync(PROFILE_STORAGE_KEY);
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const profile = raw;
+    if (!profile.nickname)
+        return null;
+    return { nickname: profile.nickname, avatarUrl: profile.avatarUrl || '' };
+}
+function isRegistered() {
+    return Boolean(getStoredToken() && getStoredProfile());
+}
+function logout() {
+    wx.removeStorageSync(TOKEN_STORAGE_KEY);
+    wx.removeStorageSync(PROFILE_STORAGE_KEY);
+}
+async function registerOrLogin(profile) {
+    const code = await wxLogin();
+    const data = await request('/auth/wechat', {
+        method: 'POST',
+        data: { code, nickname: profile.nickname, avatarUrl: profile.avatarUrl },
+    });
+    wx.setStorageSync(TOKEN_STORAGE_KEY, data.token);
+    wx.setStorageSync(PROFILE_STORAGE_KEY, profile);
+    return data.token;
+}
+function rankings(schoolId = 'bistu', limit = 20) {
+    return request(`/rankings${queryString({ schoolId, limit })}`);
+}
+function categories(schoolId = 'bistu') {
+    return request(`/categories${queryString({ schoolId })}`);
+}
+function announcement(schoolId = 'bistu') {
+    return request(`/announcements${queryString({ schoolId })}`);
+}
+function canteenData(schoolId = 'bistu') {
+    return request('/miniprogram/call', {
+        method: 'POST',
+        data: { action: 'getCanteenData', schoolId },
+    });
+}
+function adminLogin(password) {
+    return request('/admin/login', {
+        method: 'POST',
+        data: { password },
+    });
+}
+function dishes(schoolId = 'bistu', includeOffline = false) {
+    return request(`/dishes${queryString({
+        schoolId,
+        includeOffline: includeOffline ? 1 : 0,
+        limit: 200,
+    })}`);
+}
+function updateDish(token, dishId, patch) {
+    return request(`/dishes/${dishId}`, {
+        method: 'PUT',
+        token,
+        data: patch,
+    });
+}
+function setAnnouncement(token, schoolId, content) {
+    return request('/announcements', {
+        method: 'PUT',
+        token,
+        data: { schoolId, content },
+    });
+}
+function createCategory(token, schoolId, name) {
+    return request('/categories', {
+        method: 'POST',
+        token,
+        data: { schoolId, name },
+    });
+}
+function rateDish(token, dishId, score) {
+    return request('/ratings', {
+        method: 'POST',
+        token,
+        data: { dishId, score },
+    });
+}
+function uploadDish(token, payload, imagePath) {
+    const formData = cleanPayload({
+        schoolId: payload.schoolId,
+        name: payload.name,
+        categoryName: payload.categoryName || '',
+        description: payload.description || '',
+        shopName: payload.shopName || '',
+        floorName: payload.floorName || '',
+    });
+    if (!imagePath) {
+        return request('/dishes', {
+            method: 'POST',
+            token,
+            data: formData,
+        });
     }
-  })
-  const token = body.data && body.data.token
-  if (token) {
-    wx.setStorageSync(TOKEN_STORAGE_KEY, token)
-  }
-  return body.data
-}
-
-async function getUserToken() {
-  const cached = wx.getStorageSync(TOKEN_STORAGE_KEY)
-  if (cached) return cached
-
-  const data = await login()
-  return data.token
-}
-
-module.exports = {
-  API_BASE_STORAGE_KEY,
-  TOKEN_STORAGE_KEY,
-  getApiBaseUrl,
-  setApiBaseUrl,
-  request,
-  callFunction,
-  categories,
-  rankings,
-  announcement,
-  canteenData,
-  adminLogin,
-  dishes,
-  updateDish,
-  setAnnouncement,
-  createCategory,
-  rateDish,
-  uploadDish,
-  login,
-  getUserToken
+    return new Promise((resolve, reject) => {
+        wx.uploadFile({
+            url: `${getApiBaseUrl()}/dishes`,
+            filePath: imagePath,
+            name: 'image',
+            formData,
+            header: authHeader(token),
+            success(res) {
+                let body = {};
+                try {
+                    body = JSON.parse(res.data);
+                }
+                catch (error) {
+                    reject(new Error('上传响应解析失败'));
+                    return;
+                }
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    reject(new Error(body.message || `上传失败：${res.statusCode}`));
+                    return;
+                }
+                try {
+                    resolve(unwrap(body));
+                }
+                catch (error) {
+                    reject(error);
+                }
+            },
+            fail(err) {
+                reject(new Error(err.errMsg || '上传失败'));
+            },
+        });
+    });
 }

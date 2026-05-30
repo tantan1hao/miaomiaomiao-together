@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:dev": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:seed:launch-data": "node prisma/seed-launch-data.js",
     "prisma:import:upstream-hierarchy": "node prisma/import-upstream-hierarchy.js"
   },
   "dependencies": {

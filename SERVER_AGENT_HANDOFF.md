@@ -2,21 +2,21 @@
 
 ## 目标
 
-把 fork 仓库部署到生产服务器，并只导入 upstream 原项目里的学校/食堂/楼层/店铺层级数据。
+把 fork 仓库部署到生产服务器，先导入 upstream 原项目里的学校/食堂/楼层/店铺层级数据，再为正式上线写入首批可展示的菜品、分类、评分和公告数据。
 
-本次不要导入示例菜品、示例评分或图片。生产导入命令必须使用：
+生产层级导入命令必须先使用：
 
 ```bash
 npm run prisma:import:upstream-hierarchy
 ```
 
-不要在生产上运行：
+正式上线前如果 `/dish-api/dishes` 和 `/dish-api/rankings` 仍为空，继续执行：
 
 ```bash
-npm run prisma:seed
+npm run prisma:seed:launch-data
 ```
 
-`prisma:seed` 是开发示例数据，会额外创建菜品、分类、评分和公告。
+不要把 `prisma:seed` 当成正式导入脚本；`prisma:seed` 仍是开发示例数据。正式首批数据使用 `prisma:seed:launch-data`，它会创建首批上架菜品、分类、种子评分和公告，让小程序首页不再只有模拟样张。
 
 ## 当前同步状态
 
@@ -41,6 +41,7 @@ npm run prisma:seed
 
 - `server/src/legacy-data.js`
 - `server/prisma/import-upstream-hierarchy.js`
+- `server/prisma/seed-launch-data.js`
 - `server/src/load-env.js`
 - `server/deploy/dish-rank-server.service.example`
 - `server/deploy/nginx-dish.conf.example`
@@ -292,6 +293,30 @@ npm run prisma:import:upstream-hierarchy
 - 上传图片
 - 历史用户数据
 
+### 7. 写入首批上线菜品数据
+
+如果是正式上线，不要让公开榜单空着。层级导入成功后执行：
+
+```bash
+cd /opt/miaomiaomiao-together/server
+npm run prisma:seed:launch-data
+```
+
+期望输出类似：
+
+```text
+首批上线菜品写入完成 school=bistu dishes=10 seededRatings=200
+```
+
+该脚本会 upsert：
+
+- 盖饭、麻辣、粉面、热菜、小吃、饮品分类
+- 10 个首批 `ACTIVE` 菜品
+- 20 个种子读者账号及对应评分，用于生成非空动态榜单
+- 1 条当前公告
+
+脚本会根据 `Rating` 表重新计算每道菜的 `avgScore` 和 `ratingCount`，后续真实用户评分会继续通过接口动态更新榜单。
+
 ## systemd 接入
 
 仓库模板：
@@ -355,6 +380,7 @@ sudo systemctl reload nginx
 ```bash
 curl http://127.0.0.1:3002/dish-api/health
 curl http://127.0.0.1:3002/dish-api/schools
+curl 'http://127.0.0.1:3002/dish-api/rankings?schoolId=bistu&limit=3'
 curl -X POST http://127.0.0.1:3002/dish-api/miniprogram/call \
   -H 'content-type: application/json' \
   -d '{"action":"getCanteenData","schoolId":"bistu"}'
@@ -374,7 +400,7 @@ curl -I https://YOUR_DOMAIN/dish/
 - 二食堂：4 层
 - 总店铺数：42
 
-`/dish-api/dishes` 在只导入层级后可以为空，这是预期行为。
+正式上线口径下，`/dish-api/dishes` 和 `/dish-api/rankings` 不应该为空；为空说明还没有执行 `npm run prisma:seed:launch-data`，或后台没有上架任何菜品。
 
 管理类写接口需要后台 token。旧兼容接口 `/dish-api/miniprogram/call` 的公开读动作仍可用，但学校管理、食堂结构修改、公告更新、建议列表、全校统计等动作必须带 `Authorization: Bearer <admin-token>`，否则应返回 401/403。
 
@@ -431,4 +457,5 @@ https://YOUR_DOMAIN/dish-api/
 - `systemctl status dish-rank-server --no-pager` 摘要
 - `curl /dish-api/health` 输出
 - `getCanteenData` 的食堂、楼层、店铺数量
+- `/dish-api/rankings?schoolId=bistu&limit=3` 的前三名摘要
 - Nginx `nginx -t` 结果

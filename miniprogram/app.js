@@ -1,8 +1,10 @@
-// app.js
+"use strict";
+// app.ts
 App({
-  onLaunch: function () {
-    this.globalData = {
-      apiBaseUrl: 'https://tantanzhang.cn/dish-api'
-    }
-  }
-})
+    globalData: {
+        apiBaseUrl: 'https://tantanzhang.cn/dish-api',
+    },
+    onLaunch() {
+        wx.setStorageSync('lastOpenAt', Date.now());
+    },
+});
